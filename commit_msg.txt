@@ -1,0 +1,54 @@
+Add IMBH galactic-nuclei reimplementation: Phases 0-2 complete, Phase 3 in progress
+
+Reimplements and extends the semianalytic dynamical-formation model from Newton
+et al. 2026 (ApJ, 1006:184), which asks whether intermediate-mass black holes
+can form in nuclear star clusters through ordinary stellar collisions and BH-BH
+GW-capture mergers.
+
+Phase 0 - Scaffolding
+- src/tests/docs/paper/figures/results/scripts/config layout, pyproject.toml
+- SimulationConfig dataclass system (cluster/population/integration), YAML
+  load/save, config/default.yaml matching the paper's fiducial run
+
+Phase 1 - Core physics (Sections 2 and 4 of the paper)
+- cluster.py, gw_capture.py, recoil.py, collisions.py, relaxation.py,
+  inspiral.py: every equation implemented and unit-tested against the primary
+  source PDF (read directly, not paraphrased) plus five further papers pulled
+  in to resolve equations the paper cites but doesn't fully specify
+  (Holley-Bockelmann 2008, Volonteri 2013, Rose 2020, Rose 2022,
+  Barausse & Rezzolla 2009)
+- Caught and corrected a real error versus an earlier paraphrased pass
+  (velocity dispersion was missing a (alpha+1) factor)
+- Resolved a genuinely undefined term in the paper's final-spin equation by
+  tracing it to Barausse & Rezzolla 2009, verified against their own published
+  NR calibration benchmark to 3 decimal places
+- Flagged, with reasoning, a likely typo in the paper's spin-change equation
+  (exponent mismatch against its own cited source)
+- docs/equations.md and paper/limitations.md maintained throughout as the
+  living record of every equation's sourcing and every judgment call
+
+Phase 2 - Monte Carlo integration loop
+- orbital_dynamics.py (Kepler mechanics, velocity-kick application),
+  population.py (initial orbital sampling), simulation.py (the full
+  per-timestep probabilistic update loop with structured DataFrame output)
+- Three real bugs found via full-loop stress testing (not visible in
+  isolated unit tests) and fixed with regression tests: a negative
+  GW-capture cross section at small radii, BHs permanently stuck mid-orbit
+  after a kick, and an unphysical relaxation-kick blowup from an uncapped
+  adaptive timestep
+
+Phase 3 - Validation (in progress)
+- initial_conditions.py: all four published initial BH mass/spin
+  distributions (K20, K20+M, H18, H18+M), including a real pre-ship bug fix
+  (decorrelated mass/spin draws for the merger-product "+M" variants)
+- H18 confirmed as an exact closed form from Hoang et al. 2018; K20
+  reconstructed from the paper's own Figure 1 histogram, since its cited
+  source (Kremer et al. 2020) is a numerical simulation with no closed-form
+  mass function to transcribe
+- A real N=1000, 10 Gyr validation run against Table 1 does not yet match:
+  the EMRI rate is far above the paper's implied rate. Root cause narrowed
+  to the relaxation-kick timestep aggregation, not the merger physics
+  (independently verified against a numerical-relativity benchmark) --
+  documented in detail in paper/limitations.md as the next concrete task
+
+214 tests passing. 10 reference papers archived in references/.

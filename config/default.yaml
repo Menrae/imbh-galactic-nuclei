@@ -1,0 +1,25 @@
+# Default simulation config, matching Newton et al. 2026 fiducial run
+# (M_SMBH = 4e6 Msun, N = 1000, alpha_star = 1.25, alpha_bh = 1.83, 10 Gyr).
+cluster:
+  m_smbh: 4.0e+6
+  alpha_star: 1.25
+  alpha_bh: 1.83
+  rho0: 1.35e+6
+  r0: 0.25
+  n0_bh: 1.0e+4
+  r_h: 1.0
+  coulomb_log: 10.0
+  a_max_pc: 0.1
+  a_min_pc: 1.0e-3
+
+population:
+  initial_mass_distribution: H18+M
+  n_bh: 1000
+  primordial_binary_fraction: 0.15
+  mean_bh_mass: 20.0
+
+integration:
+  t_max_gyr: 10.0
+  dt0_yr: 1.0e+6
+  timestep_safety_factor: 0.1
+  seed: 0
