@@ -84,15 +84,21 @@ directly (not guessing) turned up some genuinely useful findings:
   space — the kind of thing you only find by actually running the thing at scale, not by
   reviewing the formulas on paper. All fixed, with regression tests added so they can't
   silently come back.
-- **We haven't yet matched the paper's numbers, and we know why not.** Comparing our
-  simulation to the paper's published results, black holes are currently falling into
-  the central black hole (becoming what's called an "EMRI") far too often in our
-  version — about 75% of the population over 10 billion years, versus a few percent in
-  the original paper. We've narrowed this down to how we're modeling one specific
-  process (small random gravitational nudges from the rest of the cluster, accumulated
-  over time) rather than a basic coding mistake — the mass-growth machinery itself
-  checks out against an independent physics benchmark. This is the top priority before
-  we can trust any Phase 3+ results.
+- **We've made real progress on the EMRI over-production problem, but it's not fully solved,
+  and fixing it exposed a second, new problem.** The over-aggressive "black holes falling
+  in" rate (originally ~75% of the population over 10 billion years, vs. a few percent in
+  the paper) came down to ~35% after two changes: modeling the random-walk process as
+  many smaller updates instead of one big one per timestep, and re-deriving two formula
+  inputs from the original underlying papers rather than guessing (see
+  `paper/limitations.md#phase2-emri-rate-high` for the full trace). That second re-derivation
+  is itself genuinely ambiguous — the paper's text supports two different readings, and we
+  picked the one that keeps black hole mergers happening at all, since the other reading
+  reintroduces the original problem almost exactly. Picking it, however, exposed a *new*
+  issue: in every trial, at least one black hole snowballs to 6,000-9,400 solar masses (the
+  paper reports a maximum of about 400), through a growth process the original paper's own
+  underlying model acknowledges CAN happen but expects to be kept in check by the same
+  random-walk process we just weakened. This is now the top open question before Phase 3+
+  results can be trusted, and it's logged in detail, including what we ruled out and why.
 - **The paper cites a simulation, not a formula, for one of its four starting
   conditions.** For the "K20" case, we ended up reading the numbers directly off the
   paper's own plotted histogram, since the underlying source is itself a large numerical
@@ -106,10 +112,12 @@ one of these decisions, along with our reasoning, is logged in detail in
 
 ## What's next
 
-Fix the over-aggressive "black holes falling in" behavior, then run the full validation
-against the paper's published table of results. Once that's solid, we move to the part
-of this project that's genuinely new: mapping out whether there's a sharp dividing line
-between "this environment makes giant black holes" and "it never does."
+Decide how to handle the new runaway-growth question (documented candidly rather than
+resolved, since it's a genuine open question, not a bug), then run the full validation
+against the paper's published table of results across all four starting conditions. Once
+that's solid, we move to the part of this project that's genuinely new: mapping out whether
+there's a sharp dividing line between "this environment makes giant black holes" and "it
+never does."
 
 ## Where to look for more detail
 

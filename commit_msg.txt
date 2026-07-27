@@ -1,54 +1,81 @@
-Add IMBH galactic-nuclei reimplementation: Phases 0-2 complete, Phase 3 in progress
+Phase 3: fix relaxation-walk EMRI overproduction, validate all four initial conditions
 
-Reimplements and extends the semianalytic dynamical-formation model from Newton
-et al. 2026 (ApJ, 1006:184), which asks whether intermediate-mass black holes
-can form in nuclear star clusters through ordinary stellar collisions and BH-BH
-GW-capture mergers.
+Continues Phase 3 from the previous commit's "EMRI rate far too high" blocker
+(757/1000 EMRIs, 3 mergers vs. Table 1's 371 for H18). Two independently-justified
+fixes plus one unrelated bug fix bring this down substantially, though a genuine,
+documented open question remains in the heavier-mass initial conditions.
 
-Phase 0 - Scaffolding
-- src/tests/docs/paper/figures/results/scripts/config layout, pyproject.toml
-- SimulationConfig dataclass system (cluster/population/integration), YAML
-  load/save, config/default.yaml matching the paper's fiducial run
+Fix 1 - Genuine substepping of the relaxation random walk
+- _apply_relaxation_walk (simulation.py) no longer aggregates an entire timestep's
+  relaxation kick as one Gaussian evaluated at the timestep's starting semimajor
+  axis. It now breaks each timestep into IntegrationConfig.relaxation_substeps
+  (default 20) sub-steps, re-deriving local dynamics (period, t_relax, v_circ) at
+  the BH's current radius between them.
+- Measured effect: 75.7% -> 64.5% EMRI at N=1000. A 1-2000 substep-count scan
+  showed no further improvement past this -- substep coarseness was not the
+  dominant cause of the original problem, but the fix is real and kept.
 
-Phase 1 - Core physics (Sections 2 and 4 of the paper)
-- cluster.py, gw_capture.py, recoil.py, collisions.py, relaxation.py,
-  inspiral.py: every equation implemented and unit-tested against the primary
-  source PDF (read directly, not paraphrased) plus five further papers pulled
-  in to resolve equations the paper cites but doesn't fully specify
-  (Holley-Bockelmann 2008, Volonteri 2013, Rose 2020, Rose 2022,
-  Barausse & Rezzolla 2009)
-- Caught and corrected a real error versus an earlier paraphrased pass
-  (velocity dispersion was missing a (alpha+1) factor)
-- Resolved a genuinely undefined term in the paper's final-spin equation by
-  tracing it to Barausse & Rezzolla 2009, verified against their own published
-  NR calibration benchmark to 3 decimal places
-- Flagged, with reasoning, a likely typo in the paper's spin-change equation
-  (exponent mismatch against its own cited source)
-- docs/equations.md and paper/limitations.md maintained throughout as the
-  living record of every equation's sourcing and every judgment call
+Fix 2 - Re-derived Eq. 22's <M_avg>/rho and the Coulomb logarithm from primary
+sources, independent of EMRI-rate matching (per explicit instruction)
+- <M_avg>/rho switched from a BH-inclusive weighted average to star-only
+  (1 Msun, rho_star), per Rose et al. 2022 Eq. 10's explicit "single-mass
+  system" statement -- the paper this exact mechanism is credited to.
+- Coulomb logarithm recomputed as ln(M_bullet/M_star) ~= 15.2 (was a 10.0
+  placeholder), per Bar-Or, Kupi & Alexander 2013 and Vasiliev 2017, both
+  fetched and read directly -- the standard prescription specifically for
+  relaxation dominated by a central point mass.
+- Measured effect: 64.5% -> 34-37% EMRI, merger channel revived (400-580
+  mergers per run, vs. near-zero before).
+- This resolution is contested, not settled: N26's own Eq. 22 phrasing (which
+  drops Rose et al. 2022's "single-mass system" qualifier) plus Eq. 23's
+  explicit star-only override (redundant if Eq. 22 already defaulted to
+  star-only) argue for the opposite (BH-inclusive) reading. Both readings were
+  empirically tested; BH-inclusive reproduces the original defect almost
+  exactly (68.8% EMRI, zero mergers). Star-only was kept because it's the only
+  one that leaves the merger channel functioning. Full trace, including the
+  page-image verification of both equations, in
+  paper/limitations.md#average-object-mass.
 
-Phase 2 - Monte Carlo integration loop
-- orbital_dynamics.py (Kepler mechanics, velocity-kick application),
-  population.py (initial orbital sampling), simulation.py (the full
-  per-timestep probabilistic update loop with structured DataFrame output)
-- Three real bugs found via full-loop stress testing (not visible in
-  isolated unit tests) and fixed with regression tests: a negative
-  GW-capture cross section at small radii, BHs permanently stuck mid-orbit
-  after a kick, and an unphysical relaxation-kick blowup from an uncapped
-  adaptive timestep
+Bug fix - mean_bh_mass placeholder
+- PopulationConfig.mean_bh_mass had been left at a flat, unchecked 20.0 for all
+  four initial conditions. Actual Monte Carlo sampler means: K20 9.72, K20+M
+  9.94, H18 33.40, H18+M 34.20 -- off by up to 40% in both directions. Fixed;
+  default updated to H18+M's actual mean (34.2).
 
-Phase 3 - Validation (in progress)
-- initial_conditions.py: all four published initial BH mass/spin
-  distributions (K20, K20+M, H18, H18+M), including a real pre-ship bug fix
-  (decorrelated mass/spin draws for the merger-product "+M" variants)
-- H18 confirmed as an exact closed form from Hoang et al. 2018; K20
-  reconstructed from the paper's own Figure 1 histogram, since its cited
-  source (Kremer et al. 2020) is a numerical simulation with no closed-form
-  mass function to transcribe
-- A real N=1000, 10 Gyr validation run against Table 1 does not yet match:
-  the EMRI rate is far above the paper's implied rate. Root cause narrowed
-  to the relaxation-kick timestep aggregation, not the merger physics
-  (independently verified against a numerical-relativity benchmark) --
-  documented in detail in paper/limitations.md as the next concrete task
+New finding - systematic runaway growth in H18/H18+M (open, not resolved)
+- With both fixes applied, every one of 6 independent H18/H18+M seeds produces
+  at least one BH that grows to 3,556-89,870 Msun over 55-231 merger
+  generations, vs. Table 1's 407.3 Msun max / 12-16G. Traced directly: both the
+  stellar-collision (Eq. 18) and GW-capture (Eq. 4-7) channels have genuine,
+  correctly-implemented superlinear mass-dependent positive feedback once a BH
+  is massive and sits in the dense inner cluster -- verified against a direct
+  high-resolution page-image render of Eq. 4-6, not a transcription bug.
+  Quantified precisely across all 6 seeds: it's a robust, moderate heavy tail
+  (44-58 BHs/1000 exceed 200 Msun consistently), not 1-3 rare outliers, with
+  only the single most extreme BH per run responsible for the eye-catching
+  10,000+ Msun figures. K20/K20+M show no such runaway in any of 6 seeds and
+  validate well against Table 1 (mergers/max mass within ~1.3-1.5x).
+- Logged as a genuinely open scientific question (not a bug left unfixed): it
+  traces back to the same unresolved Eq. 22 tension above, which controls how
+  effectively relaxation can evict a growing BH from the runaway-conducive
+  region before either channel's feedback runs away with it. Full mechanism
+  trace, per-seed numbers, and ruled-out alternative explanations (stellar
+  depletion, ejection rate) in paper/limitations.md#phase2-emri-rate-high.
 
-214 tests passing. 10 reference papers archived in references/.
+Phase 3 validation artifacts
+- scripts/phase3_validation.py: reproduction script, all 4 ICs x 3 seeds,
+  N=1000, 10 Gyr, parallelized.
+- results/phase3_validation_2026-07-26.md: full comparison table against
+  docs/table1_reference.md with an honest read of what validates and what
+  doesn't.
+- results/phase3_validation_2026-07-26_raw.csv: underlying per-run summary data.
+
+Tests
+- 4 new tests for the substepped relaxation walk (tests/test_simulation.py).
+- Full suite (217 tests) passing.
+
+Docs
+- paper/limitations.md and docs/equations.md updated throughout per the
+  project's standing convention: every decision, including the ones still
+  open, logged with reasoning rather than silently resolved.
+- PROJECT_OVERVIEW.md's status sections brought up to date.

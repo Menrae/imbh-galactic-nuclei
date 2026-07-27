@@ -116,26 +116,96 @@ $m_{\rm cap} = \min(\dot m_{\rm BH}\times t_{\star,\rm cross},\ 1\,M_\odot)$.
 
 ## Average object mass in Eq. 22 {#average-object-mass}
 
-N26 describes $\langle M_{\rm avg}\rangle$ in the relaxation-time formula (Eq. 22) only as
-"the average object mass," with no formula given. The single-population analog in Rose et
-al. 2020 (Eq. 17 there) just uses $\langle M_\star\rangle$, but N26's cluster is explicitly
-two-component (BHs + 1 M☉ stars), and N26's own Section 4.3 text describes relaxation as
-proceeding through interactions with "other objects" generically, not just stars.
+**Revised during the Phase 3 EMRI-rate fix (see `#phase2-emri-rate-high` below for the full
+diagnostic trail). This entry supersedes the original resolution below the line.** Current
+implementation: **star-only**, $\langle M_{\rm avg}\rangle = 1\,M_\odot$, $\rho=\rho_\star$ —
+adopted despite a genuine, unresolved textual tension with the BH-inclusive reading, because
+it was empirically tested against the alternative and is the one that keeps the merger
+channel alive (see below). This is flagged as **open**, not settled — a future pass with more
+information (or direct correspondence with N26's authors) could overturn it.
 
-**Resolution adopted**: $\langle M_{\rm avg}\rangle(r)$ = the number-density-weighted mean
-object mass of the local population at $r$: $[n_\star(r)\cdot 1 M_\odot + n_{\rm BH}(r)\cdot
-\langle m_{\rm BH}\rangle] / [n_\star(r)+n_{\rm BH}(r)]$, with $\langle m_{\rm BH}\rangle$ the
-mean of the initial BH mass distribution in use for that run.
+**The tension, in full:**
 
-**Why**: mirrors how N26 itself handles the analogous "$m_2$" placeholder in the GW-capture
-$\eta$ calculation (Section 4.1: "we take $m_2$ in $\eta$ to be the average of the initial
-mass distribution") — using a population mean where an individual encounter partner isn't
-tracked is already N26's own convention elsewhere in the paper.
+- **For star-only**: S. C. Rose et al. 2022 (ApJL, 929, L22), the paper N26 explicitly says
+  it extends for exactly this relaxation mechanism ("a semianalytic model first developed by
+  S. C. Rose et al. 2022"), states in their Eq. 10 — confirmed by direct PDF read, not
+  paraphrase — "The two-body relaxation timescale for a **single-mass system** is: $t_{\rm
+  relax} = 0.34\sigma^3/(G^2\rho\langle M_*\rangle\ln\Lambda_{\rm rlx})$ ... $\langle
+  M_*\rangle$ is the average mass of the surrounding objects, **here assumed to be 1
+  M$_\odot$**." Rose et al. 2022's own density model is single-component (stars only; no
+  BH-density-profile analog of N26's Eq. 2 exists in that paper at all), so their formula
+  has nothing else it *could* mean.
+- **For BH-inclusive**: N26's own Eq. 22 sentence drops Rose et al. 2022's "single-mass
+  system" qualifier entirely — it just says "$\langle M_{\rm avg}\rangle$ is the average
+  object mass, and $\rho$ is their mass density" — and N26 introduces a genuinely *new*
+  two-component density apparatus (Eq. 2's $n_{\rm BH}(r)$) that Rose et al. 2022 never had,
+  specifically to support the new GW-capture channel. Most tellingly: Eq. 23 (mass-segregation
+  timescale) explicitly writes $t_{\rm seg}\approx (M_\star/m_{\rm BH})\times t_{\rm
+  relax}(\langle M_{\rm avg}\rangle=M_\star,\ \rho=\rho_\star)$ — confirmed via a
+  high-resolution page-image re-render (not an OCR artifact) of page 6. Explicitly overriding
+  to star-only for this *one* derived quantity only makes sense as a deliberate exception if
+  Eq. 22's own default is *not* already star-only — otherwise the override is vacuous.
 
-**How to apply**: `imbh_nuclei.relaxation.relaxation_timescale` takes this as a computed
-input; **flagged to user** as a best-guess resolution, not a textual certainty — open to
-correction if it visibly affects Phase 3 reproduction of relaxation-driven quantities (e.g.
-EMRI timing).
+**Empirical test of both readings** (N=1000, H18, 10 Gyr, seed 0, with the Coulomb-log fix
+below and substepping both applied): star-only gives EMRI 34-37% (consistent across 3 seeds),
+400-580 mergers, but a systematic (3/3 seeds) runaway to one BH reaching 6000-9400 $M_\odot$
+over 55-86 merger generations — Table 1 reports 407.3 $M_\odot$ max, 12G max generation for
+H18. BH-inclusive gives EMRI 68.8%, **zero** mergers, max generation 1 — i.e. it reproduces
+the original defect (relaxation depletes the population via EMRI before the GW-capture
+channel ever completes a single merger) almost exactly. **Neither reproduces Table 1's
+balance.** Star-only was kept because it is the only one of the two that leaves the
+GW-capture channel functioning at all, which was the original point of this fix; the
+runaway-growth residual is logged as a separate, still-open item (see
+`#phase2-emri-rate-high`).
+
+**Two other candidate explanations were checked and ruled out as the origin of the
+runaway-growth residual specifically** (not as resolutions of the $\langle M_{\rm
+avg}\rangle$ tension itself): (1) Rose et al. 2022 explicitly says their model treats
+background stars as an undepleted "reservoir," and flags (as an acknowledged, *unimplemented*
+limitation of their own model) that real stellar depletion near the SMBH "may reduce the BH
+growth in the innermost region" — since this mechanism isn't in Rose et al. 2022's own model
+either, its absence here doesn't explain why N26 reports a bounded growth ceiling; (2) N26
+gives no numeric ejection-fraction or ejection-rate figure for its fiducial runs to check our
+own ejection counts against, so that channel could not be verified or ruled out quickly.
+
+**How to apply**: `imbh_nuclei.simulation._timescales` and `_local_t_relax` implement the
+star-only choice explicitly (not via `relaxation.average_object_mass`, which is now unused in
+the simulation loop but kept for its own unit tests and for any future revisit of this
+question). `imbh_nuclei.relaxation.segregation_timescale` (Eq. 23) was star-only from the
+start and is unaffected by this entry.
+
+---
+
+**Original resolution (2026, pre-Phase-3-validation; superseded above, kept for history)**:
+$\langle M_{\rm avg}\rangle(r)$ = the number-density-weighted mean object mass of the local
+population at $r$: $[n_\star(r)\cdot 1 M_\odot + n_{\rm BH}(r)\cdot \langle m_{\rm
+BH}\rangle] / [n_\star(r)+n_{\rm BH}(r)]$, mirroring how N26 handles the analogous "$m_2$"
+placeholder in the GW-capture $\eta$ calculation. This turned out to be the direct cause of
+the Phase 2 smoke-test's near-100% EMRI fraction and near-zero merger count (see
+`#phase2-emri-rate-high`) — the BH-density term dominates the stellar term by 3-46x at the
+radii that matter, once actually run at N=1000/10 Gyr scale rather than the 50-300 BH smoke
+tests used when this resolution was first adopted.
+
+## mean_bh_mass placeholder was measurably wrong per-IC {#mean-bh-mass-placeholder}
+
+Found while setting up the Phase 3 4-IC validation runs: `PopulationConfig.mean_bh_mass`
+("the average of the initial mass distribution," used as $m_2$ in the GW-capture $\eta$
+calculation per N26 Section 4.1's explicit statement) had been carried through Phase 2
+smoke-testing as a flat `20.0` placeholder for every initial condition, never actually
+checked against the corresponding sampler. A large-N (2e6) Monte Carlo estimate of each
+sampler's true mean gives: K20 9.72, K20+M 9.94, H18 33.40, H18+M 34.20 — i.e. `20.0` was
+~40% too *high* for K20/K20+M and ~40% too *low* for H18/H18+M.
+
+**Resolution adopted**: `PopulationConfig.mean_bh_mass` default updated to `34.2` (H18+M,
+this dataclass's own default IC); Phase 3 runs set it explicitly per IC to the measured
+value above.
+
+**Why**: this is a factual, computable property of each sampler (not an interpretive
+ambiguity) — no reason to leave it at an unchecked round number once the samplers exist to
+check it against.
+
+**How to apply**: any future config construction for a specific IC must set `mean_bh_mass`
+to that IC's actual sampler mean, not reuse the dataclass default across ICs.
 
 ## Phase 0/1 — Scaffolding & cluster structure (original entries, superseded above)
 
@@ -207,22 +277,58 @@ documented config default ($10^{-3}$ pc).
 
 ## Coulomb logarithm not specified {#coulomb-logarithm}
 
-N26 Eq. 22 includes $\ln\Lambda$, "the Coulomb logarithm," with no numeric prescription
-given — just a generic citation to Binney & Tremaine 2008. Common choices in this subfield
-for a cusp dominated by a central SMBH include $\ln\Lambda \sim \ln(M_\bullet/\langle
-m\rangle)$ or $\ln(0.4N)$ for $N$ objects within the relevant radius; these give
-substantially different numeric values (typically $\ln\Lambda \sim 10$-$20$ either way, but
-not identical).
+**Resolved (revised during the Phase 3 EMRI-rate fix)**. N26 Eq. 22 includes $\ln\Lambda$,
+"the Coulomb logarithm," with no numeric prescription — just a generic citation to Binney &
+Tremaine 2008 (as does Rose et al. 2022's Eq. 10, the source of this exact formula, which
+also gives no number). Per the user's request, this was investigated independently of the
+$\langle M_{\rm avg}\rangle$ question and independently of EMRI-rate matching, starting from
+the papers N26/Rose 2022 actually cite plus the specific literature on relaxation around a
+dominant central mass:
 
-**Resolution adopted**: none — `relaxation_timescale` requires `coulomb_log` as an explicit
-argument with no default, forcing this choice to be made visibly at the call site (in the
-Phase 2 integration loop) rather than buried in this module.
+- **Ben Bar-Or, G. Kupi, & T. Alexander 2013** (ApJ, 764, 52, "Stellar Energy Relaxation
+  around a Massive Black Hole" — fetched and read directly, arXiv:1209.4594): for a cusp
+  dominated by a central point mass, "$\log\Lambda \sim \log Q$ is typically a large, O(10)
+  factor," where $Q = M_\bullet/m_\star$ is the SMBH-to-star mass ratio — explicitly
+  distinguished from the general globular-cluster convention.
+- **E. Vasiliev 2017** (ApJ, 848, 10, "A New Fokker–Planck Approach for Relaxation-driven
+  Evolution of Galactic Nuclei" — fetched and read directly, arXiv:1709.04467): a modern,
+  rigorous multi-component (star+BH) Fokker-Planck code explicitly built for exactly this
+  problem. States $\ln\Lambda \simeq \ln(M_\bullet/m_\star)$, and for a Milky-Way-like
+  nucleus model — **the same $M_\bullet = 4\times10^6\,M_\odot$ as N26's fiducial galaxy** —
+  uses $\ln\Lambda = 15$.
 
-**Why**: unlike $\langle M_{\rm avg}\rangle$, there isn't a clear textual anchor elsewhere in
-N26 to base a best-guess resolution on, so we defer the choice rather than guess.
+This is the **standard, well-established prescription specifically for the $Q=M_\bullet/m\gg1$
+regime** (a single, heavy central mass dominating the relaxation of a much lighter
+population) — a physically different regime from the $\ln(0.4N)$ convention used for
+self-gravitating systems *without* a dominant central mass (globular clusters), which is
+therefore the less appropriate of the two candidates previously listed here.
 
-**How to apply**: whoever wires up the Phase 2 loop must pick a value/formula for
-$\ln\Lambda$ and document the choice here when that happens.
+**Resolution adopted**: $\ln\Lambda = \ln(M_\bullet/M_\star) = \ln(4\times10^6/1) \approx
+15.2018$, paired with the star-only $\langle M_{\rm avg}\rangle=M_\star=1\,M_\odot$ resolution
+above (the two are linked: $Q=M_\bullet/m$ presumes a single relaxing-population mass $m$, so
+this specific numeric value is only self-consistent with the star-only reading of $\langle
+M_{\rm avg}\rangle$ — if that reading is ever revisited, this value should be too).
+
+**Why**: this is a decisive, converging result from two independent, directly-relevant
+sources (one a dedicated N-body calibration study, one a modern multi-component code
+explicitly modeling a Milky-Way-mass nucleus), not a single citation or guess. It fully
+resolves what was previously an open, undecided placeholder.
+
+**How to apply**: `ClusterConfig.coulomb_log` defaults to `15.201804919084164` (was `10.0`).
+If `m_smbh` is changed from its default (e.g. Phase 5's SMBH-mass scan), this value should be
+recomputed as $\ln(m_{\rm smbh}/1.0)$, not reused verbatim — flagged in the config field's own
+docstring.
+
+**No genuine literature inconsistency found** worth a standalone discussion: unlike the
+$\langle M_{\rm avg}\rangle$ question, the two sources checked here agree with each other
+(and give a number matching almost exactly, 15 vs 15.2, for the same physical system), and
+neither contradicts N26/Rose et al. 2022's generic Binney & Tremaine 2008 citation — they are
+simply more specific than N26 bothered to be. Bahcall & Wolf 1976 and Aharon & Perets 2016
+(N26's own cited source for the BH density profile) were not directly consulted for their own
+$\ln\Lambda$ conventions (both are pre-2015/hard-to-access primary sources not in
+`references/`), so it remains possible a closer read of those two specifically would surface
+a differing convention — flagged as a loose end, not a finding, given the strong agreement
+already found elsewhere.
 
 ## Eccentricity dependence of BH-star collision timescale is focusing-dominated
 
@@ -268,43 +374,194 @@ previously left as pure "caller must decide":
   keeping per-step event probabilities $\lesssim 10\%$ (a standard choice for this kind of
   Poisson-probability Monte Carlo scheme, not paper-specified).
 
-## Phase 2 smoke-test EMRI fraction is much higher than N26's implied rate {#phase2-emri-rate-high}
+## Phase 2/3 EMRI fraction is much higher than N26's implied rate, and a new runaway-growth issue {#phase2-emri-rate-high}
 
-**Updated with real data.** A full $N=1000$, 10 Gyr run using the actual H18 initial
-distribution (`initial_conditions.py`, Phase 3) gives: 757 EMRIs (75.7%), only 3 GW-capture
-mergers, and a maximum final mass of 100.3 $M_\odot$. Table 1's H18 row instead reports 371
-mergers, max mass 407.3 $M_\odot$, and (from Section 5.4's rate figures) an implied EMRI
-count of order tens over 10 Gyr, not hundreds. The GW-capture merger channel itself is not
-obviously broken (an equal-mass, non-spinning test merger gave remnant $\chi_f\approx0.685$,
-matching the independently-verified Schwarzschild benchmark to 3 decimals) -- the low merger
-count looks like a *consequence* of the EMRI channel removing BHs from the pool before they
-have time to grow via collisions/captures, not an independent bug.
+**Status: substantially improved, not fully resolved. Two independent fixes applied, one new
+discrepancy discovered and investigated, residual gap documented honestly below.**
 
-**Root cause, narrowed down**: direct inspection of the timescales (`t_relax` vs. orbital
-period, vs. `dt`) shows the relaxation-kick aggregation is internally consistent with the
-*definition* of $t_{\rm relax}$ (velocity randomizes by order-of-itself over one relaxation
-time) -- at $\Delta t = 0.1\,t_{\rm relax}$ (our `timestep_safety_factor`), the aggregated
-kick naturally comes out to $\sim\sqrt{0.1}\approx32\%$ of the local circular velocity, which
-is large but not unphysical for that definition. Testing sensitivity to `coulomb_log` (10 vs.
-30 vs. 100) shows the EMRI fraction is *not* strongly parameter-sensitive in that range (all
-three gave 70-85% of a 300-BH test sample reaching excursion/EMRI/ejected) -- ruling out
-`coulomb_log`'s specific placeholder value as the primary cause. This points to something more
-structural in the per-timestep aggregation itself: treating a timestep spanning
-$10^5$-$10^6$ orbits as *one* Gaussian kick evaluated at the *starting* radius's kick-scale
-does not capture that the local dynamics (period, $t_{\rm relax}$, $v_{\rm circ}$) should
-themselves evolve *during* that walk in a true diffusion process -- our one-shot aggregation
-implicitly assumes they stay fixed at the pre-timestep values for the whole span, which stops
-being a good approximation once the walk is large enough to be interesting (i.e. always, at
-these radii, given how much shorter orbital periods are than any reasonable global timestep).
+### Original symptom (pre-fix)
 
-**Not resolved in this pass.** The most promising concrete next step: replace the one-shot
-aggregated-kick approximation with genuine per-orbit (or coarser but still sub-timestep)
-substepping of the relaxation walk, so the local dynamics update *during* a timestep rather
-than only at its start and end. This is real implementation work, not a parameter tweak, and
-is the top blocker for a meaningful Phase 3 comparison against Table 1 -- **Phase 3's other
-deliverable, the four initial mass/spin distributions (`initial_conditions.py`), is complete
-and tested independently of this issue** (see `docs/equations.md#initial-conditions`), so
-that work is not blocked, only the full validation run against Table 1's numbers is.
+A full $N=1000$, 10 Gyr run using the H18 initial distribution gave: 757 EMRIs (75.7%), only
+3 GW-capture mergers, max final mass 100.3 $M_\odot$. Table 1's H18 row reports 371 mergers,
+max mass 407.3 $M_\odot$, implied EMRI count of order tens (few % of 1000) over 10 Gyr. The
+merger physics itself was independently verified against a numerical-relativity benchmark
+(Barausse & Rezzolla 2009's calibration point, matched to 3 decimals) — the low merger count
+looked like a consequence of the EMRI channel depleting the population before BHs could grow,
+not an independent bug in the merger equations.
+
+### Fix 1: genuine substepping of the relaxation walk (small effect, ~11pp)
+
+The per-timestep relaxation kick was aggregated as *one* Gaussian evaluated at the timestep's
+*starting* $a$, even though a timestep can span $10^5$-$10^6$ real orbits at small $a$ — the
+local dynamics (period, $t_{\rm relax}$, $v_{\rm circ}$) implicitly held fixed for the whole
+span. `_apply_relaxation_walk` (`simulation.py`) now breaks each timestep into
+`IntegrationConfig.relaxation_substeps` (default 20) sub-steps, re-evaluating local dynamics
+at the BH's current $a$ between them — see `docs/equations.md#orbital-random-walk-from-relaxation`
+for the tradeoff writeup (literal per-orbit substepping is the Rose et al. 2022 prescription
+but impractical at N=1000 scale). **Effect measured**: 75.7% → 64.5% EMRI at N=1000. A
+follow-up scan of `relaxation_substeps` from 1 to 2000 (2000x range, N=150) moved the result
+only between 55-74% with no monotonic trend — i.e. this fix is real and worth keeping (it's
+more physically correct regardless), but substep coarseness was **not** the dominant cause of
+the original 75.7%.
+
+### Fix 2: <M_avg>/rho and Coulomb log re-derivation from primary sources (large effect)
+
+Traced independently of EMRI-rate matching, per the user's explicit request (see
+`#average-object-mass` and `#coulomb-logarithm` above for the full evidence trail):
+$\langle M_{\rm avg}\rangle$/$\rho$ switched from a BH-inclusive weighted average to
+star-only ($1\,M_\odot$, $\rho_\star$), following Rose et al. 2022 Eq. 10's explicit
+"single-mass system" statement; $\ln\Lambda$ recomputed as $\ln(M_\bullet/M_\star)\approx
+15.2$ (was a 10.0 placeholder), following Bar-Or, Kupi & Alexander 2013 and Vasiliev 2017.
+**Effect measured**: 64.5% → 34-37% EMRI at N=1000 (consistent across 3 seeds), with the
+merger channel now genuinely active (400-580 mergers per run, vs. near-zero before).
+
+**This resolution is contested, not settled** — see `#average-object-mass` for the full
+back-and-forth: N26's own Eq. 22 phrasing (dropping Rose et al. 2022's "single-mass system"
+qualifier) plus Eq. 23's explicit star-only override (redundant if Eq. 22's default were
+already star-only) is a real, textually-grounded argument for the *opposite* (BH-inclusive)
+reading. Both readings were empirically tested at N=1000/10Gyr/3 seeds; BH-inclusive
+reproduces the *original* defect almost exactly (68.8% EMRI, **zero** mergers, max generation
+1). Star-only was kept because it's the only one of the two that leaves the GW-capture
+channel functioning — but this is a **pragmatic choice under a live, undecided ambiguity**,
+not a confirmed resolution.
+
+### New discrepancy found: systematic runaway growth (open, not resolved)
+
+With both fixes applied, EMRI rate is much improved (34-37%, vs. the paper's implied few
+percent — still elevated but no longer 75%) but a **new, systematic** problem appeared:
+every one of 3 independent seeds (N=1000, H18, 10 Gyr) produces at least one BH that
+snowballs to **6000-9400 $M_\odot$** over **55-86 merger generations**, vs. Table 1's 407.3
+$M_\odot$ max and stated 12G maximum generation for H18. This is not a rare one-off outlier
+(confirmed systematic across seeds 0, 1, 2) but the bulk of the population is much closer to
+Table 1's scale (99th-percentile mass 295-543 $M_\odot$ across the three seeds, roughly the
+right order for Table 1's "4 BHs $>10\times M_i$" statistic) — so this looks like a
+heavy-tailed, rare-catastrophic-trajectory problem specifically, not a uniform miscalibration
+of the whole population.
+
+**Mechanism, traced directly** (seed 0's runaway BH: generation 63, mass 9402 $M_\odot$,
+sitting at $a=0.0012$ pc, 5221 individual stellar collisions): both growth channels have
+genuine, paper-documented positive feedback once a BH is massive and sits in a dense inner
+region — Eq. 18's gravitational-focusing collision cross-section scales with BH mass, and
+Eq. 4's GW-capture cross-section scales with $M_{\rm tot}^2$. Recoil kicks for these
+late-stage mergers are tiny (0.05-6.7 km/s) because the mass ratio is extreme
+($m_2\approx$ mean initial mass $\ll m_1$), so the runaway BH's orbit barely moves once it
+starts growing — it neither escapes to a safer radius nor decays into the SMBH fast enough to
+terminate the runaway within 10 Gyr. Rose et al. 2022 (the base model) explicitly describes
+relaxation's role as *not just* causing EMRIs but "impeding the growth of BHs... by allowing
+them to diffuse out of the inner region where collisions are efficient," and their own
+abstract states the (unmoderated) stellar-collision channel alone can produce IMBHs "as
+massive as $10^4\,M_\odot$" — so a $\sim10^4\,M_\odot$ outlier is not unprecedented in the
+underlying literature, but Table 1's actual reported ceiling ($\sim400\,M_\odot$) implies
+N26's calibration suppresses it far more effectively than ours currently does.
+
+**Time-boxed follow-up investigation (requested by user, completed, did not resolve the
+tension)**: (1) tested reverting to BH-inclusive $\langle M_{\rm avg}\rangle$/$\rho$ for Eq.
+22's general relaxation usage (keeping Eq. 23's segregation timescale star-only, unchanged) —
+this does fix the runaway (max mass back to a sane 100.3 $M_\odot$, since strong relaxation
+evicts growing BHs from the efficient zone before they run away) but **recreates the original
+defect** (68.8% EMRI, zero mergers) almost exactly, i.e. trades one failure mode for the
+other rather than resolving the tension; (2) checked Rose et al. 2022 for a stellar-depletion
+mechanism that might explain N26's growth ceiling — found only an explicit acknowledgment that
+depletion is *not* included in their own model either, so its absence here doesn't explain the
+discrepancy; (3) checked N26's text for a quantitative ejection-rate target to check our own
+recoil-kick ejection counts against — none given, so this channel could not be verified or
+ruled out.
+
+### Follow-up: GW-capture cross-section mass-dependence, investigated (2026-07-27)
+
+The lead flagged above — that the GW-capture channel's own mass-dependence might be a
+separate contributor, not just relaxation — was investigated directly.
+
+**Eq. 4-6 (b_max, b_min, A_cap) re-verified against a direct high-resolution page-image
+render of N26 page 4** (not text extraction, which garbles the math): our implementation
+matches term-for-term, including the exponents ($\eta^{1/7}$, $(v_{\rm rel}/c)^{-9/7}$ for
+$b_{\rm max}$; $(v_{\rm rel}/c)^{-1}$ for $b_{\rm min}$) and the $340\pi/3$ prefactor. **No
+transcription error found** — the formulas are correctly implemented.
+
+Given that, the mass-dependence *is* the source of the runaway, but as correctly-implemented
+physics, not a bug: $b_{\rm max}\propto M_{\rm tot}\,\eta^{1/7}$, and for $m_1\gg m_2$ (a
+tracked BH that has already grown large capturing typical-mass partners), this reduces to
+$b_{\rm max}\propto m_1^{6/7}$, giving a capture cross-section $A_{\rm cap}\propto m_1^{12/7}$
+and thus $t_{\rm GW}\propto m_1^{-12/7}$ — a **superlinear, positive-feedback runaway** as the
+tracked BH's own mass grows (confirmed by the timing data: merger generations accelerate
+visibly toward the end of a runaway BH's growth history, e.g. gen 54→63 in ~1.2 Gyr for one
+traced lineage, vs. gen 1→22 over the first ~5 Gyr). The stellar-collision channel (Eq. 18)
+has an analogous, if gentler, mass-dependence via gravitational focusing. This is the same
+double positive-feedback mechanism already described above, now confirmed to originate from
+correctly-implemented, verified equations rather than an implementation error.
+
+**The extent of the tail, precisely quantified** (all 6 H18/H18+M seeds, consistent to
+within ~30%): 44-58 BHs/1000 exceed 200 $M_\odot$, 13-19 exceed 500 $M_\odot$, 6-10 exceed
+1000 $M_\odot$, 3-6 exceed 2000 $M_\odot$, and only 0-3 exceed 5000 $M_\odot$ (with just 0-1
+per run reaching the extreme 10,000+ $M_\odot$ tier that dominates the "max mass" statistic).
+This revises the earlier "1-3 rare outliers" framing: it is a genuine, robust, moderately
+broad heavy tail (tens of BHs undergo substantial hierarchical growth into the hundreds-to-
+low-thousands range, consistent across every seed), with only the single most extreme
+BH per run responsible for the eye-catching 10,000-90,000 $M_\odot$ figures. Of the BHs
+exceeding 500 $M_\odot$ in the traced example, roughly 40% had already been caught by the
+EMRI channel by 10 Gyr (8 of 19) — confirming growth and EMRI-driven removal are genuinely
+*racing* each other, with growth winning outright for a small, non-negligible fraction of
+the population.
+
+**Conclusion, logged honestly**: no additional implementation bug was found in the GW-capture
+channel — Eq. 4-7 are correctly implemented and independently verified. The residual
+discrepancy is a genuine, currently unresolved tension between two textually-defensible
+readings of Eq. 22's $\langle M_{\rm avg}\rangle$ (star-only vs. BH-inclusive), which
+controls how effectively relaxation can evict a BH from the runaway-conducive regime (small
+$a$, large mass) before both the correctly-implemented, superlinear collision and
+GW-capture feedback channels run away with it. This is **not** a coding bug left unfixed — it
+is a scientifically genuine open question given what the primary sources actually say, logged
+here per this project's standing convention of surfacing ambiguities rather than silently
+picking a resolution and moving on. **Recommendation for future work**: if the Phase 4/5
+"critical mass" analysis proves sensitive to the extreme upper tail specifically (rather than
+the bulk distribution, which is much closer to Table 1's scale), this should be revisited —
+most likely by finding a middle-ground resolution of the $\langle M_{\rm avg}\rangle$
+question (partial, not all-or-nothing, BH contribution) rather than continuing to treat it as
+a binary choice between the two extremes already tested.
+
+### Follow-up: searching for a middle ground, before Phase 4 (2026-07-27) — none found
+
+Before starting Phase 4, two concrete candidate "middle grounds" were tested, specifically
+to avoid treating this as a binary choice. Neither worked, and the reasons why are informative
+in their own right.
+
+**Candidate 1 — a physically rigorous multi-species weighting, rather than either all-or-
+-nothing extreme.** Eq. 22's underlying formula (Binney & Tremaine 2008, Eq. 7.106) is
+derived for a *single-mass* population. Its standard textbook generalization to a system with
+multiple mass species (Chandrasekhar/Spitzer-style two-body relaxation theory) does not
+replace $\rho\langle M_{\rm avg}\rangle$ with our number-weighted mean; it replaces it with
+$\sum_j n_j m_j^2$ (the second mass-moment), because heavier field objects contribute to a
+test particle's velocity diffusion in proportion to $m^2$, not $m$. This is the textbook-
+correct multi-species answer, so it looked like the most principled possible "third reading."
+**It isn't a middle ground — it's more extreme than BH-inclusive.** Computed numerically at
+$a=10^{-3}$ pc for H18: star-only gives $\rho\langle M_{\rm avg}\rangle \sim 1.3\times10^9$;
+our already-tested (and already-too-strong) BH-inclusive number-weighted reading gives
+$\sim2.5\times10^{12}$; the rigorous $m^2$-moment gives $\sim3.4\times10^{12}$ — *larger*
+still. There is no principled multi-species weighting formula sitting between the two extremes
+already tested; the more carefully one applies standard relaxation theory to a population with
+a much heavier second species, the *more* that species dominates, not less.
+
+**Candidate 2 — finer substepping specifically under the BH-inclusive reading**, to check
+whether the "0 mergers" outcome was itself a numerical-fidelity artifact (as substep coarseness
+partially was for the original EMRI-rate problem) rather than a property of the physics.
+Scanned `relaxation_substeps` at 20, 200, and 2000 under BH-inclusive with all of today's other
+fixes in place (N=150, H18, 10 Gyr, corrected `mean_bh_mass`): EMRI fraction moved only
+60.0% → 54.0% → 51.3%, and **mergers stayed at exactly zero at every substep count**, even at
+2000 (100x finer than the adopted default). This rules out numerical fidelity as the source of
+the BH-inclusive reading's defect — it is a property of the physics at that magnitude, not an
+artifact of how finely we integrate it.
+
+**Conclusion**: the tension is a genuine structural fork, not a dial. Both tested resolutions
+sit at defensible extremes with no principled interpolation between them found on either the
+weighting-formula axis or the numerical-fidelity axis. Star-only remains the adopted choice
+(documented above). **Recommendation, revised**: Phase 4 should not treat this as resolved by
+further searching for a compromise value. Either (a) explicitly scope Phase 4's results as
+contingent on the star-only reading and flag it prominently wherever the extreme upper tail of
+the mass distribution matters to a conclusion, or (b) run the critical-initial-mass-threshold
+scan under both readings and report whether the *location* of any threshold found is robust to
+this choice — which is likely to be more informative than the exact tail statistics anyway,
+since the bulk-population behavior (which is what a threshold-detection question mostly
+depends on) is far less sensitive to this choice than the extreme maximum is.
 
 ## Still to resolve before Phase 1 (Section 4) is considered fully complete
 

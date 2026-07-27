@@ -36,12 +36,19 @@ class ClusterConfig:
     n0_bh: float = 1.0e4
     #: SMBH sphere-of-influence radius R_h [pc], the BH density normalization radius (Eq. 2).
     r_h: float = 1.0
-    #: Coulomb logarithm ln(Lambda) for the relaxation timescale (Eq. 22). NOT specified
-    #: by Newton et al. 2026 -- see paper/limitations.md#coulomb-logarithm. ln(10) ~ 2.3
-    #: is a placeholder pending a literature value; ln(M_SMBH/<m>) ~ 12-13 is a common
-    #: alternative choice in this subfield -- deliberately not defaulted to that without
-    #: a decision, so this default is conservative/small rather than silently "reasonable".
-    coulomb_log: float = 10.0
+    #: Coulomb logarithm ln(Lambda) for the relaxation timescale (Eq. 22). Not specified
+    #: numerically by Newton et al. 2026 (nor by S. C. Rose et al. 2022, whose Eq. 10 this
+    #: formula is), but the specific regime -- relaxation of a single-mass (star) population
+    #: dominated by a much heavier central point mass (Q = M_bullet/m_star >> 1) -- has a
+    #: well-established standard prescription in the literature: ln(Lambda) ~ ln(Q), NOT the
+    #: ln(0.4N) convention used for self-gravitating systems without a dominant central mass
+    #: (see paper/limitations.md#coulomb-logarithm for the literature trace: Ben Bar-Or,
+    #: G. Kupi, & T. Alexander 2013, ApJ, 764, 52; E. Vasiliev 2017, ApJ, 848, 10, who use
+    #: this exact prescription for a Milky-Way-like M_bullet=4e6 Msun nucleus and get
+    #: ln(Lambda)=15). Default here is ln(4e6/1) = 15.2018, evaluated at this dataclass's
+    #: own m_smbh/star-mass defaults -- if m_smbh is changed (e.g. Phase 5's SMBH mass
+    #: scan), this value should be recomputed as ln(m_smbh/1.0), not reused verbatim.
+    coulomb_log: float = 15.201804919084164
     #: Outer bound for the tracked cluster region [pc] (Eq. 2 focus region, confirmed).
     a_max_pc: float = 0.1
     #: Inner bound for initial semimajor-axis sampling [pc] -- see
@@ -62,9 +69,15 @@ class PopulationConfig:
     primordial_binary_fraction: float = 0.15
     #: Mean BH mass [Msun] of the initial distribution in use, for the GW-capture eta
     #: calculation ("we take m2 in eta to be the average of the initial mass
-    #: distribution", Section 4.1) and the Eq. 22 <M_avg> resolution. Phase 3 should set
-    #: this consistently with whichever mass_sampler is actually used.
-    mean_bh_mass: float = 20.0
+    #: distribution", Section 4.1). MUST be set consistently with whichever
+    #: mass_sampler is actually used -- this default (34.2) is the Monte Carlo-estimated
+    #: mean specifically for H18+M (this dataclass's own default
+    #: initial_mass_distribution), computed directly from
+    #: initial_conditions.get_samplers("H18+M") at N=2e6, not a placeholder. Measured
+    #: per-IC means (found to differ from an earlier, uncorrected 20.0 placeholder used
+    #: through Phase 2 smoke-testing -- see paper/limitations.md#phase2-emri-rate-high):
+    #: K20 9.72, K20+M 9.94, H18 33.40, H18+M 34.20.
+    mean_bh_mass: float = 34.2
 
     def __post_init__(self) -> None:
         if self.initial_mass_distribution not in VALID_INITIAL_DISTRIBUTIONS:
@@ -89,6 +102,14 @@ class IntegrationConfig:
     timestep_safety_factor: float = 0.1
     #: Random seed for reproducibility.
     seed: int = 0
+    #: Number of sub-steps the relaxation random walk (Sec 4.3) is broken into within
+    #: each global timestep, so local dynamics (orbital period, t_relax, v_circ) get
+    #: re-evaluated partway through the walk instead of only at its start -- see
+    #: paper/limitations.md#phase2-emri-rate-high and
+    #: docs/equations.md#orbital-random-walk-from-relaxation for why the one-shot
+    #: aggregation (implicitly holding these fixed for the whole span) was wrong, and why
+    #: this coarser-than-per-orbit substep count is our practical middle ground.
+    relaxation_substeps: int = 20
 
 
 @dataclass

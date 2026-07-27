@@ -22,11 +22,20 @@ module's own modeling choices (documented inline) are:
   eccentricity (N26 does not give a specific value) -- flagged, see
   paper/limitations.md.
 - The relaxation velocity kick (Rose et al. 2022's per-orbit Gaussian prescription) is
-  applied once per *timestep* rather than once per *orbit*, using the standard result
-  that a sum of dt/P independent iid Gaussian kicks is itself Gaussian with variance
-  scaled by dt/P -- not an approximation beyond what's already in the per-orbit
-  prescription, just an efficient aggregation over the (typically much longer) global
-  timestep.
+  applied as `IntegrationConfig.relaxation_substeps` aggregated Gaussian kicks per
+  *timestep* rather than one per *orbit* (literally 10^5-10^6 kicks per timestep at
+  small radii -- impractical at N=1000 scale) or one aggregated kick for the whole
+  timestep (an earlier version of this code; see
+  paper/limitations.md#phase2-emri-rate-high). Each sub-step still aggregates its
+  dt/n_sub/P_orbit orbits into one Gaussian draw (valid: a sum of iid Gaussian kicks is
+  itself Gaussian), but the local dynamics (period, t_relax, v_circ -- all functions of
+  the current semimajor axis) are *recomputed* at the start of each sub-step rather than
+  held fixed for the entire timestep. This is a deliberate middle ground, not the literal
+  per-orbit prescription: it lets the walk's own drift in `a` feed back into the kick
+  amplitude partway through a timestep (letting the diffusion accelerate or decelerate as
+  the BH's radius changes), at the cost of `relaxation_substeps` times more work per
+  timestep instead of dt/P times more. See docs/equations.md for the tradeoff reasoning
+  and why a fixed substep count (not literally per-orbit) was chosen.
 - A kicked BH that ends up bound but beyond a_max is marked 'excursion' and skips
   collision/capture/relaxation processing until it sinks back to a_max after one
   mass-segregation timescale (computed at its new mass/orbit) -- N26 describes this
@@ -88,11 +97,13 @@ def _timescales(pop: PopulationState, mask: np.ndarray, config: SimulationConfig
     t_gw = gw_capture.capture_timescale(
         mass, config.population.mean_bh_mass, cq["sigma_bh"], cq["n_bh_density"]
     )
-    mavg = relaxation.average_object_mass(
-        cq["n_star"], cq["n_bh_density"], config.population.mean_bh_mass
-    )
-    rho_total = cq["rho_star"] + cq["n_bh_density"] * config.population.mean_bh_mass
-    t_relax = relaxation.relaxation_timescale(cq["sigma_star"], rho_total, mavg, c.coulomb_log)
+    # Eq. 22's <M_avg>/rho: star-only (mean_object_mass=1 Msun, rho=rho_star) -- adopted
+    # as the official choice despite a genuine, documented textual tension with a
+    # BH-inclusive reading; see paper/limitations.md#average-object-mass for the full
+    # trace of both readings and why star-only was adopted anyway (it fixes the original
+    # near-zero-merger defect; BH-inclusive was empirically tested and reproduces that
+    # same defect almost exactly).
+    t_relax = relaxation.relaxation_timescale(cq["sigma_star"], cq["rho_star"], 1.0, c.coulomb_log)
     t_seg = relaxation.segregation_timescale(mass, cq["sigma_star"], cq["rho_star"], c.coulomb_log)
     tau_gw_circular = inspiral.remaining_merger_time_circular(mass, c.m_smbh, a)
 
@@ -207,7 +218,7 @@ def run_simulation(
 
         # --- relaxation random walk (all still-active BHs) ---
         still_active_mask = pop.status[active_idx] == "active"
-        _apply_relaxation_walk(pop, active_idx, still_active_mask, ts, dt, c, rng, t_global_yr)
+        _apply_relaxation_walk(pop, active_idx, still_active_mask, dt, config, rng, t_global_yr)
 
         # --- GW inspiral decay (Peters), all still-active BHs ---
         still_active_mask = pop.status[active_idx] == "active"
@@ -352,28 +363,65 @@ def _finalize_orbit_after_kick(pop, idx, a_new, e_new, bound, cluster_cfg, t_glo
         pop.reactivation_time_yr[exc_idx] = t_global_yr + t_seg
 
 
-def _apply_relaxation_walk(pop, active_idx, still_active_mask, ts, dt, cluster_cfg, rng, t_global_yr):
-    """Apply the aggregated relaxation kick to BHs that are still 'active' after the
-    collision/capture channels this step. `still_active_mask` is a boolean mask over
-    `active_idx`'s positions, matching the ordering of every array inside `ts` (all
-    computed over the full original active set at the top of the timestep).
+def _local_t_relax(a: np.ndarray, config: SimulationConfig) -> np.ndarray:
+    """Relaxation timescale (Eq. 22) evaluated fresh at the given semimajor axis/axes --
+    used to re-derive the relaxation-kick amplitude partway through a substepped walk
+    (see _apply_relaxation_walk), mirroring exactly the t_relax calculation in
+    _timescales but callable at an arbitrary (mid-walk) `a` rather than only the
+    start-of-timestep value. Star-only <M_avg>/rho -- see the matching comment in
+    _timescales and paper/limitations.md#average-object-mass.
     """
+    c = config.cluster
+    cq = _cluster_quantities(a, config)
+    return relaxation.relaxation_timescale(cq["sigma_star"], cq["rho_star"], 1.0, c.coulomb_log)
+
+
+def _apply_relaxation_walk(pop, active_idx, still_active_mask, dt, config, rng, t_global_yr):
+    """Apply the relaxation random walk to BHs that are still 'active' after the
+    collision/capture channels this step, broken into `relaxation_substeps` sub-steps
+    (see module docstring and paper/limitations.md#phase2-emri-rate-high) so the local
+    dynamics get re-evaluated at the BH's *current* semimajar axis partway through the
+    walk, rather than only at the start of the (potentially huge, in orbit count)
+    timestep. `still_active_mask` is a boolean mask over `active_idx`'s positions.
+    """
+    c = config.cluster
     idx = active_idx[still_active_mask]
     if idx.size == 0:
         return
-    a = pop.a[idx]
-    t_relax = ts["t_relax"][still_active_mask]
 
-    period = orbital_dynamics.orbital_period(a, cluster_cfg.m_smbh)
-    per_orbit_sigma = orbital_dynamics.relaxation_kick_sigma(a, cluster_cfg.m_smbh, t_relax)
-    n_orbits = np.maximum(dt / period, 1.0)  # at least one "orbit" of kick per timestep
-    aggregated_sigma = per_orbit_sigma * np.sqrt(n_orbits)
-    kick_speed = np.abs(rng.normal(0, aggregated_sigma))
+    n_sub = config.integration.relaxation_substeps
+    dt_sub = dt / n_sub
 
-    a_new, e_new, bound = orbital_dynamics.apply_velocity_kick(
-        a, pop.e[idx], cluster_cfg.m_smbh, kick_speed, rng
-    )
-    _finalize_orbit_after_kick(pop, idx, a_new, e_new, bound, cluster_cfg, t_global_yr)
+    a = pop.a[idx].copy()
+    e = pop.e[idx].copy()
+    bound_final = np.ones(idx.size, dtype=bool)
+    #: still being substepped this timestep -- drops out (frozen a/e/bound_final) as
+    #: soon as a BH is kicked unbound (ejected) or beyond a_max (excursion), matching the
+    #: original one-shot code's behavior of not processing those further this step.
+    alive = np.ones(idx.size, dtype=bool)
+
+    for _ in range(n_sub):
+        live_pos = np.flatnonzero(alive)
+        if live_pos.size == 0:
+            break
+        a_live = a[live_pos]
+
+        t_relax_live = _local_t_relax(a_live, config)
+        period = orbital_dynamics.orbital_period(a_live, c.m_smbh)
+        per_orbit_sigma = orbital_dynamics.relaxation_kick_sigma(a_live, c.m_smbh, t_relax_live)
+        n_orbits = np.maximum(dt_sub / period, 1.0)  # at least one "orbit" of kick per sub-step
+        aggregated_sigma = per_orbit_sigma * np.sqrt(n_orbits)
+        kick_speed = np.abs(rng.normal(0, aggregated_sigma))
+
+        a_new, e_new, bound = orbital_dynamics.apply_velocity_kick(
+            a_live, e[live_pos], c.m_smbh, kick_speed, rng
+        )
+        a[live_pos] = a_new
+        e[live_pos] = e_new
+        bound_final[live_pos] = bound
+        alive[live_pos] = bound & (a_new <= c.a_max_pc)
+
+    _finalize_orbit_after_kick(pop, idx, a, e, bound_final, c, t_global_yr)
 
 
 def _apply_gw_inspiral_decay(pop, idx, cluster_cfg, dt):

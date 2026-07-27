@@ -15,10 +15,13 @@ def _zero_spin_sampler(n, rng):
 
 def _small_config(n_bh=30, t_max_gyr=1.0, seed=0, **overrides):
     cluster_kwargs = {k: v for k, v in overrides.items() if k in ClusterConfig.__dataclass_fields__}
+    integration_kwargs = {
+        k: v for k, v in overrides.items() if k in IntegrationConfig.__dataclass_fields__
+    }
     return SimulationConfig(
         cluster=ClusterConfig(**cluster_kwargs),
         population=PopulationConfig(n_bh=n_bh, mean_bh_mass=25.0),
-        integration=IntegrationConfig(t_max_gyr=t_max_gyr, dt0_yr=1.0e6, seed=seed),
+        integration=IntegrationConfig(t_max_gyr=t_max_gyr, dt0_yr=1.0e6, seed=seed, **integration_kwargs),
     )
 
 
@@ -162,6 +165,46 @@ class TestExcursionReactivation:
         assert results.final_time_gyr == pytest.approx(10.0, rel=1e-6) or not np.any(
             results.population.status == "excursion"
         )
+
+
+class TestRelaxationSubstepping:
+    """See paper/limitations.md#phase2-emri-rate-high: the relaxation walk is broken
+    into `relaxation_substeps` sub-steps so local dynamics update partway through a
+    timestep, rather than being aggregated as one kick using only the timestep's
+    starting semimajor axis.
+    """
+
+    def test_default_substep_count_is_a_positive_int(self):
+        assert IntegrationConfig().relaxation_substeps >= 1
+        assert isinstance(IntegrationConfig().relaxation_substeps, int)
+
+    def test_runs_and_stays_valid_with_a_single_substep(self):
+        # relaxation_substeps=1 collapses to the same aggregation as the original
+        # one-shot code (just re-derived once instead of never) -- confirm it still
+        # produces a valid, fully-evolved population.
+        config = _small_config(n_bh=40, t_max_gyr=2.0, seed=7, relaxation_substeps=1)
+        results = run_simulation(config, _uniform_mass_sampler, _zero_spin_sampler)
+        pop = results.population
+        assert np.all(pop.a[pop.status == "active"] > 0)
+        assert np.all((pop.e >= 0) & (pop.e <= 1))
+
+    def test_runs_and_stays_valid_with_many_substeps(self):
+        config = _small_config(n_bh=40, t_max_gyr=2.0, seed=7, relaxation_substeps=50)
+        results = run_simulation(config, _uniform_mass_sampler, _zero_spin_sampler)
+        pop = results.population
+        assert np.all(pop.a[pop.status == "active"] > 0)
+        assert np.all((pop.e >= 0) & (pop.e <= 1))
+        assert set(np.unique(pop.status)).issubset(
+            {"active", "excursion", "emri", "ejected"}
+        )
+
+    def test_reproducible_with_same_seed_and_substep_count(self):
+        config1 = _small_config(n_bh=30, t_max_gyr=1.0, seed=11, relaxation_substeps=10)
+        config2 = _small_config(n_bh=30, t_max_gyr=1.0, seed=11, relaxation_substeps=10)
+        r1 = run_simulation(config1, _uniform_mass_sampler, _zero_spin_sampler)
+        r2 = run_simulation(config2, _uniform_mass_sampler, _zero_spin_sampler)
+        np.testing.assert_array_equal(r1.population.a, r2.population.a)
+        np.testing.assert_array_equal(r1.population.mass, r2.population.mass)
 
 
 class TestCapturePathwayFires:

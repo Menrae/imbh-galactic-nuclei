@@ -243,6 +243,14 @@ et al. 2020 in N26.
 **Implementation**: `imbh_nuclei.gw_capture.{symmetric_mass_ratio, b_max, b_min,
 capture_cross_section, capture_timescale}`.
 
+**Re-verified 2026-07-27** against a direct high-resolution page-image render (not text
+extraction) while investigating the Phase 3 runaway-growth discrepancy — see
+`paper/limitations.md#phase2-emri-rate-high`. Exponents and prefactor confirmed exact; no
+transcription error. For $m_1\gg m_2$ (a BH that has already grown large), $b_{\rm max}
+\propto M_{\rm tot}\eta^{1/7} \propto m_1^{6/7}$, giving $t_{\rm GW}\propto m_1^{-12/7}$ — a
+genuine, correctly-implemented superlinear positive feedback as the tracked BH's own mass
+grows, which is the direct mechanism behind that discrepancy (not a bug in this module).
+
 ### Remnant mass, spin, and ISCO
 
 Final remnant mass (Eq. 8):
@@ -506,29 +514,37 @@ above), confirming the numerical prefactor 0.34 and citing Binney & Tremaine 200
 
 **Implementation**: `imbh_nuclei.relaxation.{relaxation_timescale, segregation_timescale}`.
 
-**Ambiguity note** (see `paper/limitations.md#coulomb-logarithm`): N26 gives no numeric
-prescription for $\ln\Lambda$, citing Binney & Tremaine 2008 generically. `coulomb_log` is
-therefore a required argument with no default in `relaxation_timescale` — deliberately not
-silently filled in.
-
-**Ambiguity note** (see `paper/limitations.md#average-object-mass`): N26 describes
-$\langle M_{\rm avg}\rangle$ in Eq. 22 only as "the average object mass," with no formula.
-Rose et al. 2020's single-population analog uses $\langle M_\star\rangle$ (i.e., just the
-mass of the field population under consideration). N26's cluster, however, is explicitly
-two-component (BHs + 1 M☉ stars), and Section 4.3 states relaxation proceeds through "weak
-gravitational interactions with **other objects**" generically — not just stars. Our
-resolution: $\langle M_{\rm avg}\rangle(r)$ is the number-density-weighted mean object mass
-of the *local* population at radius $r$,
-$$
-\langle M_{\rm avg}\rangle(r) = \frac{n_\star(r)\cdot 1\,M_\odot + n_{\rm BH}(r)\cdot \langle m_{\rm BH}\rangle}{n_\star(r) + n_{\rm BH}(r)},
-$$
-with $\langle m_{\rm BH}\rangle$ the mean of the initial BH mass distribution (mirroring how
-N26 handles "$m_2$" in the GW-capture $\eta$, Section 4.1). This is a best-guess resolution,
-not a textual certainty — flagged to the user.
+**Resolved (revised)** (full trace in `paper/limitations.md#average-object-mass` and
+`#coulomb-logarithm`): both $\langle M_{\rm avg}\rangle$/$\rho$ in Eq. 22 and $\ln\Lambda$
+were re-investigated from primary sources during the Phase 3 EMRI-rate fix. Current
+implementation: $\langle M_{\rm avg}\rangle=1\,M_\odot$, $\rho=\rho_\star$ (star-only, **not**
+the BH-inclusive weighted average originally adopted here), and $\ln\Lambda = \ln(M_\bullet/1\,
+M_\odot) \approx 15.2$ (not the earlier placeholder 10.0). Both choices remain genuinely
+contested — see the limitations.md entries for the full evidence trail, including an
+unresolved tension between two textually-defensible readings of $\langle M_{\rm avg}\rangle$
+that was empirically tested both ways and did not fully resolve.
 
 ### Orbital random walk from relaxation
 
-**Status: implemented as a simplified approximation — exact source equations not yet pulled.**
+**Status: implemented as a simplified approximation, now with genuine sub-timestep
+substepping (see below) — exact source equations not yet pulled.**
+
+**Substepping (added during the Phase 3 EMRI-rate fix)**: a global timestep can span
+$10^5$-$10^6$ real orbits at small $a$; the original code aggregated all of them into a
+*single* Gaussian kick using the local dynamics (period, $t_{\rm relax}$, $v_{\rm circ}$)
+evaluated once at the timestep's starting $a$. This is internally consistent with the
+*definition* of $t_{\rm relax}$ but implicitly assumes those local quantities stay fixed
+for the whole span. `imbh_nuclei.simulation._apply_relaxation_walk` now breaks each
+timestep into `IntegrationConfig.relaxation_substeps` (default 20) sub-steps, each still
+an aggregated Gaussian (a sum of iid Gaussian kicks is itself Gaussian, so aggregating
+within a sub-step is not itself an approximation), but re-evaluating the local dynamics
+at the BH's *current* $a$ between sub-steps. This is a deliberate middle ground between
+the one-shot aggregation and the literal per-orbit prescription (impractical at N=1000
+scale — see `paper/limitations.md#phase2-emri-rate-high`). **Empirically found to be a
+real but small effect**: scanning `relaxation_substeps` from 1 to 2000 (a 2000x range) at
+N=150 moved the EMRI fraction only between 55-74% with no monotonic trend — i.e. this
+alone does *not* explain the bulk of the original EMRI overproduction; see the
+limitations.md entry for the larger, separate fix that did.
 
 N26 states relaxation is modeled "by simulating a random walk in the semimajor axis and
 eccentricity parameter space (for the full equations, see S. Naoz et al. 2022; S. C. Rose
