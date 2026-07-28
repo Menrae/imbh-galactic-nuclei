@@ -49,8 +49,8 @@ The project runs in phases. Roughly:
 | 0 | Project scaffolding (code structure, config system) | Done |
 | 1 | Core physics, equation by equation, unit-tested | Done |
 | 2 | The main simulation loop that ties the physics together | Done, one known calibration issue (see below) |
-| 3 | Plugging in the paper's actual starting conditions and checking our numbers against theirs | In progress |
-| 4 | The centerpiece: mapping out where the "critical mass" transition actually is | Not started |
+| 3 | Plugging in the paper's actual starting conditions and checking our numbers against theirs | Done |
+| 4 | The centerpiece: mapping out where the "critical mass" transition actually is | Substantively answered — three passes complete, see below |
 | 5 | Does this hold up for supermassive black holes of other sizes? | Not started |
 | 6 | Universe-wide detection-rate estimate | Not started |
 | 7 | Sensitivity to a cluster-shape assumption (optional, time permitting) | Not started |
@@ -60,8 +60,9 @@ implemented and independently unit-tested (over 200 tests passing). The full
 simulation — initialize a population, run it forward in time, track collisions,
 mergers, black holes falling into the central black hole, black holes getting kicked
 out of the cluster entirely — runs end to end. We've also built the paper's four
-specific starting-condition recipes (see "K20/H18" below) so we can compare our
-numbers directly to theirs.
+specific starting-condition recipes (see "K20/H18" below), validated all four against
+the paper's published table, and used that validated pipeline to run all three planned
+passes of Phase 4's critical-mass-threshold scan (see below).
 
 ## What we've learned so far
 
@@ -97,12 +98,43 @@ directly (not guessing) turned up some genuinely useful findings:
   issue: in every trial, at least one black hole snowballs to 6,000-9,400 solar masses (the
   paper reports a maximum of about 400), through a growth process the original paper's own
   underlying model acknowledges CAN happen but expects to be kept in check by the same
-  random-walk process we just weakened. This is now the top open question before Phase 3+
-  results can be trusted, and it's logged in detail, including what we ruled out and why.
+  random-walk process we just weakened. Phase 3's full validation (all four starting
+  conditions, against the paper's published table) went ahead with this logged as an open
+  caveat rather than a blocker, since it traces to the same still-unresolved relaxation
+  ambiguity rather than a separate bug — full detail in `paper/limitations.md`.
 - **The paper cites a simulation, not a formula, for one of its four starting
   conditions.** For the "K20" case, we ended up reading the numbers directly off the
   paper's own plotted histogram, since the underlying source is itself a large numerical
   simulation with no simple mathematical description to copy.
+- **Our first pass at the critical-mass threshold looked sharp. It wasn't — and the
+  reason we caught that is the real lesson.** With 3 seeds per grid point (matching our
+  validation convention), the transition looked like it turned on in a narrow band and
+  fully saturated right after. But that "saturated" read rested on results like 3-out-of-3
+  seeds all producing an IMBH — which, done statistically, is barely more convincing than
+  a coin landing heads three times in a row. We wrote down a rule for exactly this
+  situation before trusting a finding again (`paper/methodology.md`'s 9-gate checklist:
+  location claims need enough seeds that one flip can't set the answer), reran with 8
+  seeds instead of 3 at the same points, and the "saturated" point turned out to still be
+  producing zero IMBHs in 2 of 8 trials. The honest picture is a **gradual crossover
+  spanning roughly 20-32 solar masses**, not yet fully saturated even at the top of that
+  range — a real, useful answer, just a different one than the thin sample suggested.
+  This is why the project now runs every new finding through that checklist before
+  writing it up as a result rather than an observation.
+- **A third pass asked whether a completely different starting-population choice — how
+  many black holes start out already paired up and merged, before the simulation even
+  begins — also shifts where that crossover sits. It doesn't, measurably.** Testing the
+  paper's own 0%-vs-15% "primordial binary" choice at the same 20-32 solar-mass band,
+  with the same seed count that had proven necessary to trust a location claim, found no
+  statistically distinguishable difference (pooled across all five test points: 19-of-40
+  vs. 20-of-40 trials producing an IMBH — essentially a coin flip either way). The one
+  clean effect it did have was a small, consistent 2.3% bump to the population's average
+  mass — which matches, almost exactly, the same bump this exact mechanism produced in
+  an earlier, already-validated part of the project, a reassuring cross-check rather than
+  a coincidence. The reason this makes physical sense: primordial mergers directly touch
+  only about 1 in 40 black holes, while moving the starting-mass-scale knob one notch
+  changes the whole population's mass by roughly 12% — a much bigger lever on the same
+  underlying growth process, so it's not surprising the smaller lever barely moves the
+  needle.
 
 None of this is a knock on the original paper — this level of "the details live in
 five other papers" is completely normal for how physics research is written. It just
@@ -112,12 +144,19 @@ one of these decisions, along with our reasoning, is logged in detail in
 
 ## What's next
 
-Decide how to handle the new runaway-growth question (documented candidly rather than
-resolved, since it's a genuine open question, not a bug), then run the full validation
-against the paper's published table of results across all four starting conditions. Once
-that's solid, we move to the part of this project that's genuinely new: mapping out whether
+Full validation against the paper's published table (Phase 3) is done across all four
+starting conditions, with the runaway-growth question documented candidly rather than
+resolved, since it's a genuine open question, not a bug. Phase 4 — mapping out whether
 there's a sharp dividing line between "this environment makes giant black holes" and "it
-never does."
+never does" — is now substantively answered across the scope planned at design time: the
+transition is gradual (not sharp) under one reading of a still-open equation ambiguity,
+essentially absent under the other, and unaffected by the paper's own primordial-binary-
+merger axis. Two lower-value refinements remain explicitly open but deliberately not
+pursued further (more seeds confirming the apparently-saturated 63-100 M☉ end is
+genuinely deterministic; extending the "no threshold" `bh_inclusive` finding past
+$m_{\rm max}=100\,M_\odot$, outside the paper's own studied mass regime) — see
+`results/phase4_mass_threshold_scan_2026-07-27.md`'s Caveats. Next up: Phase 5, testing
+whether the result holds for supermassive black holes of other masses.
 
 ## Where to look for more detail
 

@@ -1,10 +1,12 @@
 import numpy as np
 import pytest
 
+from imbh_nuclei.inspiral import remaining_merger_time_circular
 from imbh_nuclei.population import (
     A_MAX_PC,
     A_MIN_PC_DEFAULT,
     PopulationState,
+    a_min_safety_bound,
     initialize_population,
     sample_log_uniform_semimajor_axis,
     sample_thermal_eccentricity,
@@ -50,6 +52,44 @@ class TestLogUniformSemimajorAxis:
     def test_default_bounds_match_documented_constants(self):
         assert A_MAX_PC == pytest.approx(0.1)
         assert A_MIN_PC_DEFAULT == pytest.approx(1.0e-3)
+
+
+class TestAMinSafetyBound:
+    """Phase 5's generalization of A_MIN_PC_DEFAULT to other SMBH masses -- see
+    a_min_safety_bound's docstring for why holding A_MIN_PC_DEFAULT fixed across a
+    SMBH-mass scan would silently reintroduce the prompt-EMRI sampling artifact that
+    constant was originally introduced to avoid.
+    """
+
+    def test_at_fiducial_mass_close_to_but_not_equal_default(self):
+        # 4e6 Msun is N26's own fiducial SMBH mass -- a_min_safety_bound's exact
+        # inversion should land close to, but need not exactly equal, the
+        # manually-chosen A_MIN_PC_DEFAULT.
+        a_min = a_min_safety_bound(4.0e6)
+        assert a_min == pytest.approx(9.452e-4, rel=1e-3)
+        assert a_min != A_MIN_PC_DEFAULT
+
+    def test_recovers_target_inspiral_time(self):
+        # by construction, a BH at a_min_safety_bound(m_smbh) should take exactly the
+        # target quiescent GW-inspiral time to merge, for any m_smbh.
+        for m_smbh in [1.0e5, 4.0e6, 1.0e8]:
+            a_min = a_min_safety_bound(m_smbh)
+            tau_yr = remaining_merger_time_circular(20.0, m_smbh, a_min)
+            assert tau_yr == pytest.approx(1450.0e9, rel=1e-6)
+
+    def test_increases_with_smbh_mass(self):
+        # heavier SMBH -> faster quiescent inspiral at fixed a -> a_min must move
+        # outward to preserve the same safety margin.
+        a_min_light = a_min_safety_bound(1.0e5)
+        a_min_heavy = a_min_safety_bound(1.0e8)
+        assert a_min_heavy > a_min_light
+
+    def test_holding_default_fixed_would_break_the_safety_margin_at_high_mass(self):
+        # demonstrates the actual bug this function exists to avoid: at a SMBH mass an
+        # order of magnitude above N26's fiducial value, the *original* A_MIN_PC_DEFAULT
+        # no longer gives a safe (>>10 Gyr) inspiral time.
+        tau_yr = remaining_merger_time_circular(20.0, 4.0e7, A_MIN_PC_DEFAULT)
+        assert tau_yr / 1e9 < 100.0  # Gyr -- no longer >>10 Gyr safe margin
 
 
 class TestInitializePopulation:

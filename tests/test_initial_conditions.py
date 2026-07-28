@@ -152,6 +152,42 @@ class TestLogUniformMassScan:
         assert np.all(chi == 0.0)
         assert np.all(mass <= 40.0)
 
+    def test_get_log_uniform_samplers_plus_m_max_mass_exceeds_base_max(self):
+        # same "+M" signature as sample_k20_plus_m/sample_h18_plus_m: mergers can push
+        # a remnant above the base distribution's own upper bound.
+        mass_sampler, spin_sampler = get_log_uniform_samplers(
+            m_max=40.0, primordial_binary_fraction=0.15
+        )
+        rng = np.random.default_rng(0)
+        mass = mass_sampler(1000, rng)
+        chi = spin_sampler(1000, rng)
+        assert mass.shape == (1000,)
+        assert mass.max() > 40.0
+        assert np.any(chi > 0)
+
+    def test_get_log_uniform_samplers_plus_m_zero_fraction_matches_base(self):
+        # primordial_binary_fraction=0.0 must be a true no-op (same sampler as the
+        # default), not a merger prescription that happens to merge nothing.
+        mass_sampler, spin_sampler = get_log_uniform_samplers(
+            m_max=40.0, primordial_binary_fraction=0.0
+        )
+        rng_a = np.random.default_rng(0)
+        rng_b = np.random.default_rng(0)
+        mass_base = sample_log_uniform_mass(1000, rng_a, H18_MASS_MIN, 40.0)
+        mass_default = mass_sampler(1000, rng_b)
+        np.testing.assert_array_equal(mass_base, mass_default)
+
+    def test_get_log_uniform_samplers_plus_m_spin_before_mass_raises(self):
+        # _PairedSampler requires mass_sampler called immediately before spin_sampler;
+        # calling spin_sampler with no pending draw must raise, not silently return
+        # something mismatched.
+        mass_sampler, spin_sampler = get_log_uniform_samplers(
+            m_max=40.0, primordial_binary_fraction=0.15
+        )
+        rng = np.random.default_rng(0)
+        with pytest.raises(RuntimeError):
+            spin_sampler(100, rng)
+
 
 class TestGetSamplers:
     @pytest.mark.parametrize("name", ["K20", "K20+M", "H18", "H18+M"])

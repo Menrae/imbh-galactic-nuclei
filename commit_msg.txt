@@ -1,99 +1,55 @@
-Phase 4: critical-mass threshold scan, both Eq. 22 readings -- finds a gradual
-crossover under star_only, no threshold under bh_inclusive
+Phase 4 pass 3 (primordial-binary check, complete) + Phase 5 design and infra (not yet run)
 
-Scopes and runs the first pass of Phase 4 (N26's own stated open question: is
-there a critical initial-mass-distribution threshold for IMBH formation, and
-is any such transition sharp or gradual?). The one hard requirement carried
-over from Phase 3's still-open Eq. 22 <M_avg>/rho ambiguity: every conclusion
-had to be checked against both readings, not computed once under the
-star-only default.
+Two threads this session, picking up from Phase 4 pass 1+2 (threshold scan, committed in
+24e3507): closing out Phase 4's originally-deferred primordial-binary-fraction axis, and
+scoping/building Phase 5 (SMBH-mass generalization) -- N26's second and last stated open
+question (Section 5.4). Phase 5's actual 112-run scan has NOT been executed yet; this
+commit captures completed design, code, and tests only.
 
-Config refactor (prerequisite, not new physics)
-- Added IntegrationConfig.relaxation_mass_weighting: Literal["star_only",
-  "bh_inclusive"], replacing the hardcoded star-only implementation in
-  simulation._timescales and a new shared helper _relaxation_mass_and_density
-  (also used by _local_t_relax for the substepped relaxation walk). Both code
-  paths already existed and were already empirically tested during the Phase 3
-  investigation (paper/limitations.md#average-object-mass) -- this makes
-  switching between them a config choice instead of an inline edit.
-- Does not touch Eq. 23's segregation_timescale, which N26 states as star-only
-  regardless of this field.
+Phase 4 pass 3 (complete): does N26's own 15% primordial-binary-merger prescription shift
+the star_only critical-mass crossover pass 2 located (~20-32 Msun)?
+- initial_conditions.get_log_uniform_samplers gained a primordial_binary_fraction
+  parameter (default 0.0, backward-compatible), reusing the same apply_primordial_mergers
+  machinery already validated for K20+M/H18+M.
+- 40 new runs (5 grid points x 8 seeds) at 15% vs. pass 2's existing 0% runs at identical
+  m_max. Result: no detectable effect -- pooled 19/40 (0%) vs 20/40 (15%) any-IMBH runs,
+  Fisher's exact p=1.0. The one clean effect is a consistent +2.3% mean_bh_mass bump at
+  every grid point, matching Phase 3's real K20/K20+M (+2.2%) and H18/H18+M (+2.4%) shifts
+  almost exactly -- a good Gate 6 cross-check. Graduated as a result per
+  paper/methodology.md's gates (mechanism: primordial mergers touch only 2.5% of the
+  population vs. a ~12% mass-scale shift per m_max grid step).
+- Written up in results/phase4_mass_threshold_scan_2026-07-27.md ("Pass 3" section,
+  updated Caveats/Bottom line) and paper/limitations.md#phase4-mass-family-scan.
 
-Mass-distribution scan family
-- initial_conditions.sample_log_uniform_mass/log_uniform_mean/
-  get_log_uniform_samplers: a log-uniform family on [6, m_max] Msun,
-  generalizing H18's own functional form (H18 is the m_max=100 endpoint
-  exactly). Scan parameterization and every alternative considered (a K20/H18
-  mixture blend, scanning the primordial-binary fraction too) proposed to and
-  confirmed by the user before running anything, per
-  paper/limitations.md#phase4-mass-family-scan.
-- log_uniform_mean has an exact closed form (unlike K20's reconstructed
-  sampler), confirmed to match H18's independently Monte-Carlo-measured mean.
+PROJECT_OVERVIEW.md updated: Phase 3 marked done, Phase 4 marked substantively answered
+(all three passes), with a new narrative bullet on the pass-2 gradual-not-sharp correction
+and the pass-3 null result, and "What's next" pointing at Phase 5.
 
-Pass 1: scripts/phase4_mass_threshold_scan.py
-- 9 m_max grid points (16-100 Msun) x both Eq. 22 readings x 3 seeds = 54
-  runs, N=1000, 10 Gyr, primordial fraction 0.
-- Headline: the threshold's existence is NOT robust to the Eq. 22 ambiguity.
-  star_only rises smoothly from 0% to 12.7% (BHs > 100 Msun) across the grid;
-  bh_inclusive stays at an exact, flat 0.0% for m_max <= 79.5 and only reaches
-  a marginal 0.1-0.3% at m_max=100 itself.
-- This falsifies a working assumption from Phase 3 (that bulk-population
-  statistics would be far less sensitive to this ambiguity than the extreme
-  mass tail) -- "% BHs > 100 Msun" is itself a bulk statistic, and it's about
-  as sensitive to this choice as anything in the whole investigation.
-- Pipeline validation: the m_max=100/star_only grid point is equivalent by
-  construction to a Phase 3 H18 run and reproduces it bit-for-bit in 2 of 3
-  seeds; the third seed's small divergence is fully explained (a more precise
-  closed-form mean_bh_mass shifted one chaotic trajectory's timestep sizing).
+Phase 5 (SMBH-mass scan, design complete, not yet run): does the threshold picture
+generalize to SMBH masses other than the Milky Way's? Design decided with the user: hold
+the cluster's structural profile fixed (N26 never specifies how it would scale with
+m_smbh) and vary only m_smbh across 7 log-spaced points (1.26e5-1.26e8 Msun, centered on
+N26's own 4e6 anchor), H18 IC, both Eq. 22 readings, 8 seeds/point from the start.
 
-Pass 2: scripts/phase4b_threshold_refinement.py
-- Pass 1's apparent "critical band" (25-32 Msun) rested on a single seed
-  flipping 1-of-3 at one grid point -- not enough to state a location. Ran 31
-  more star_only-only seeds (8 total per point instead of 3) at 5 grid points
-  spanning the band. bh_inclusive did not need this: its finding was already
-  saturated at 24/24 runs reading an exact 0.0%.
-- Result: the refinement overturned the pass-1 read, not just tightened it.
-  m_max=31.8, which looked fully saturated at 3/3, turned out to be 6/8 (75%,
-  Wilson 95% CI 41-93%) once properly sampled. The "any IMBH forms"
-  probability rises smoothly and without saturating across the whole band:
-  0% (20.1) -> 38% (22.6) -> 50% (25.3) -> 75% (28.4, 31.8).
-- This is a direct, evidenced answer to the sharper of N26's own two framings
-  of the open question: under star_only, the transition is gradual, not
-  sharp, and hasn't even saturated by 31.8 Msun -- well under a third of the
-  way to H18's own 100 Msun ceiling.
+Two real problems found by smoke-testing before committing any real compute, not
+by reasoning alone -- exactly this project's established practice:
+1. population.A_MIN_PC_DEFAULT (the inner semimajor-axis sampling bound) was tuned
+   specifically for m_smbh=4e6; naively generalizing it (new
+   population.a_min_safety_bound helper) let it shrink at low m_smbh, which samples into
+   a region where the held-fixed density profile blows up to ~9000x its calibration value,
+   collapsing collision timescales and driving the step count toward its ceiling (a
+   smoke-test hang, >40 min, not a hypothetical). Fixed by clamping: a_min only grows
+   beyond the default (needed at high m_smbh), never shrinks below it.
+2. Even after that fix, low-m_smbh + star_only runs can still be dramatically slow --
+   likely genuine runaway growth becoming more severe at low m_smbh (lower velocity
+   dispersion boosts collision efficiency everywhere; lower coulomb_log weakens the
+   moderating relaxation process). One seed at m_smbh=4e5 did not converge within 15
+   minutes. Decided with the user: run the full grid as designed anyway and track
+   whether each run hits the 2,000,000-step ceiling (hit_step_ceiling column) as data in
+   its own right, rather than narrowing the grid or discarding slow runs.
 
-paper/methodology.md (new)
-- A 9-gate checklist for when a secondary finding graduates from "preliminary
-  observation" to "reportable result": primary-source grounding (three-way
-  classification of what N26 states / is ambiguous about / is purely our own
-  choice), noise-floor comparison, adequate sample size for the specific claim
-  being made, mechanism (not just pattern), a falsification/adversarial pass,
-  an internal consistency cross-check against prior validated results, an
-  explicit scope statement, framing discipline specifically for findings that
-  touch N26's own text (never imply error without checking the original cited
-  source; report every textually-defensible reading, not the cleanest one),
-  and a reproducibility artifact.
-- Built from practices this project was already using ad hoc (the Eq. 22
-  investigation), not invented from scratch. Applied as a worked scorecard
-  against the Phase 4 threshold finding: every gate passed after pass 1 except
-  sample size for the location claim specifically, which is exactly what pass
-  2 was run to close -- and closing it changed the finding, which is the
-  scorecard's own demonstration of why the gate exists.
+scripts/phase5_smbh_mass_scan.py implements the design (not yet executed -- next session's
+first task). paper/limitations.md#phase5-smbh-mass-scan has the full writeup including
+both discovered issues and their fixes/decisions.
 
-Tests
-- New tests for the config toggle (test_config.py, test_simulation.py -- 5
-  tests directly verifying the star_only/bh_inclusive math and directional
-  EMRI-rate behavior) and the log-uniform mass family
-  (test_initial_conditions.py).
-- Full suite (231 tests, 1 skip) passing.
-
-Docs
-- docs/equations.md and paper/limitations.md updated throughout: the Eq. 22
-  config toggle, the mass-scan family and its alternatives, the pass-1 and
-  pass-2 results (including the explicit correction when pass 2 overturned
-  pass 1's location claim), and a correction to the "bulk vs. tail
-  sensitivity" hypothesis from the Phase 3 investigation.
-- results/phase4_mass_threshold_scan_2026-07-27.md: full write-up, both
-  passes, comparison tables, Wilson confidence intervals, caveats.
-- results/phase4_raw/, results/phase4b_raw/: per-run summary CSVs and pickled
-  SimulationResults for both passes.
+Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>

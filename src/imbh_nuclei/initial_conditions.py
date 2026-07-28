@@ -225,17 +225,39 @@ class _PairedSampler:
         return chi
 
 
-def get_log_uniform_samplers(m_max: float, m_min: float = H18_MASS_MIN):
+def get_log_uniform_samplers(
+    m_max: float, m_min: float = H18_MASS_MIN, primordial_binary_fraction: float = 0.0
+):
     """Return (mass_sampler, spin_sampler) for the Phase 4 log-uniform mass-scan family
     (see sample_log_uniform_mass), with signature (n, rng) -> ndarray matching
-    get_samplers' convention. Nonspinning at birth (chi=0), same as the base K20/H18
-    (no "+M" variant) -- Phase 4's first-pass scan defers the primordial-merger axis to
-    a follow-up pass (see paper/limitations.md#phase4-mass-family-scan).
+    get_samplers' convention.
+
+    primordial_binary_fraction=0.0 (default): nonspinning at birth (chi=0), same as the
+    base K20/H18 (no "+M" variant) -- this was Phase 4 pass 1/2's scope, which deferred
+    the primordial-merger axis to a follow-up pass
+    (see paper/limitations.md#phase4-mass-family-scan).
+
+    primordial_binary_fraction>0: applies the same PRIMORDIAL_BINARY_FRACTION-style
+    prescription as sample_k20_plus_m/sample_h18_plus_m (apply_primordial_mergers, with
+    the log-uniform family itself as the backfill sampler), via the same _PairedSampler
+    mechanism used there to keep a merger's mass and spin correlated across the two
+    separate mass_sampler/spin_sampler calls.
     """
-    def mass_sampler(n: int, rng: np.random.Generator) -> np.ndarray:
+    def base_mass_sampler(n: int, rng: np.random.Generator) -> np.ndarray:
         return sample_log_uniform_mass(n, rng, m_min, m_max)
 
-    return mass_sampler, zero_spin
+    if primordial_binary_fraction == 0.0:
+        return base_mass_sampler, zero_spin
+
+    def joint_sampler(n: int, rng: np.random.Generator) -> tuple[np.ndarray, np.ndarray]:
+        mass = base_mass_sampler(n, rng)
+        chi = zero_spin(n, rng)
+        return apply_primordial_mergers(
+            mass, chi, base_mass_sampler, rng, binary_fraction=primordial_binary_fraction
+        )
+
+    paired = _PairedSampler(joint_sampler)
+    return paired.mass_sampler, paired.spin_sampler
 
 
 def get_samplers(name: str):

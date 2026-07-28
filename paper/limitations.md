@@ -680,6 +680,167 @@ questions are about as sensitive to this choice as they could be, not a case whe
 ambiguity washes out. Any Phase 4/5 claim about where a critical-mass threshold sits must state
 which Eq. 22 reading it assumes.
 
+### Pass 3 (design): does the primordial-binary-fraction axis shift the crossover? (open, in progress)
+
+Per this entry's own original scoping (the "Primordial-binary-merger fraction" bullet above),
+the 0%/15% axis was deliberately deferred to "a follow-up pass near the threshold region,"
+not scanned from the start, once pass 1 confirmed H18 alone (0% primordial) already produces
+IMBHs. Pass 2 has now located that region (~20-32 $M_\odot$), so this is that follow-up,
+requested by the user 2026-07-28.
+
+**Design**: `scripts/phase4c_primordial_binary_check.py`. `star_only` only (`bh_inclusive`'s
+absence-of-threshold finding is already saturated evidence — see the correction paragraph
+above — and this pass asks whether a *different* axis moves the `star_only` crossover, so
+testing it under `bh_inclusive` is out of scope here too). Same 5 $m_{\rm max}$ grid points
+as pass 2 (20.118935, 22.560436, 25.298221, 28.368246, 31.810829), so the new
+`primordial_binary_fraction=0.15` runs compare directly against pass 2's already-existing
+`=0.0` runs at identical $m_{\rm max}$ without a new baseline. 8 seeds per point (0-7),
+matching pass 2's convention from the start — per `paper/methodology.md` Gate 3 this is a
+location-adjacent comparison, not a bare existence claim, so the same $\ge$8-seed bar applies
+immediately rather than starting thin and refining. 40 new runs total.
+
+**Extension required**: `initial_conditions.get_log_uniform_samplers` gained a
+`primordial_binary_fraction` parameter (default 0.0, backward-compatible with pass 1/2's
+calls), applying the same `apply_primordial_mergers` machinery already used for
+`sample_k20_plus_m`/`sample_h18_plus_m` to the log-uniform family. `mean_bh_mass` for the
++M-modified distribution has no closed form (mergers are a nonlinear transform of the base
+draw, same reason K20/K20+M/H18/H18+M needed Monte Carlo means in Phase 3 — see
+`#mean-bh-mass-placeholder`) — estimated here at $N=2\times10^6$ per grid point, computed at
+run time rather than hardcoded so it can't go stale.
+
+**Results (2026-07-28)**: 40/40 runs completed. No detectable shift in the crossover from
+this axis: point-by-point, every `primordial_binary_fraction=0.15` value falls inside (or
+barely outside) the `=0.0` point's own 95% Wilson interval, with no consistent direction
+(one grid point even goes down); pooled across all 5 points, 19/40 (0%) vs 20/40 (15%) any-IMBH
+runs, Fisher's exact $p=1.0$. The one clean effect is a consistent **+2.3%** `mean_bh_mass`
+bump at every grid point, matching Phase 3's real K20/K20+M (+2.2%) and H18/H18+M (+2.4%)
+shifts almost exactly — a good Gate 6 cross-check that the new sampler extension behaves like
+the already-validated K20+M/H18+M path. Graduated as a result per `paper/methodology.md`'s
+gates (mechanism: primordial mergers touch only 2.5% of the population and raise the mean by
+~2%, a far smaller perturbation to the growth-rate-controlling mass scale than one $m_{\rm
+max}$ grid step, ~12% multiplicative — so a much weaker effect from this axis is physically
+expected, not just a null result taken at face value). Bounded, honestly: this rules out an
+effect large enough to clear the 8-seed Wilson-CI floor, not an arbitrarily small one — see
+`results/phase4_mass_threshold_scan_2026-07-27.md`'s "Pass 3" section and its Caveats entry
+for the precise limit and the ~4x-seeds-per-halved-CI cost of tightening it further. Full
+data: `results/phase4c_raw/summary.csv`.
+
+## Phase 5 — SMBH-mass scan family {#phase5-smbh-mass-scan}
+
+N26's second explicit open question (Section 5.4, alongside the threshold-shape question
+Phase 4 answered): does the result generalize to galaxies with SMBHs of other masses, or is
+it a Milky Way-specific coincidence? Answering this requires a genuine judgment call N26
+never makes: their cluster's structural profile — $\rho_0=1.35\times10^6\,M_\odot/{\rm
+pc}^3$, $r_0=0.25$ pc (Eq. 3), $n_0=10^4\,{\rm pc}^{-3}$, $R_h=1$ pc (Eq. 2),
+$\alpha_\star=1.25$, $\alpha_{\rm BH}=1.83$ — is given as fixed numbers specific to the
+Milky Way's $M_\bullet=4\times10^6\,M_\odot$ nucleus, with no stated prescription for how
+any of them would scale for a different-mass SMBH (`docs/equations.md`'s Appendix note on
+this flags it directly). Design decided with the user, 2026-07-28:
+
+- **Adopted**: hold the structural profile fixed at N26's own values, vary only $m_{\rm
+  smbh}$. Isolates the pure *dynamical* effect of SMBH mass — velocity dispersion
+  ($\sigma\propto\sqrt{M_\bullet}$), the relaxation timescale, GW-capture rate, and the EMRI
+  stopping condition all depend on $m_{\rm smbh}$ directly, independent of any assumption
+  about how a real galaxy's density profile differs — from the separate, unresolved question
+  of realistic profile scaling. **Explicit limitation**: this is our own extension (Gate 1c,
+  not from N26), and is *not* a claim that a real galaxy with a different-mass SMBH would
+  actually have this exact cluster structure — a genuinely different-mass galaxy's stellar
+  and BH densities plausibly scale with $M_\bullet$ too (e.g. via an $M_\bullet$-$\sigma$ or
+  $M_\bullet$-$N_\star$ relation), which this scan does not attempt.
+- **Considered, not adopted**: sourcing a literature $M_\bullet$-$\sigma$-type relation to
+  self-consistently scale $\rho_0$/$r_0$/$R_h$ with $M_\bullet$ — judged a materially bigger
+  undertaking (a new reference, a fresh ambiguity-adjudication exercise like Eq. 22's) for a
+  first pass at this question; left as a follow-up if the isolated-$M_\bullet$ result
+  motivates it.
+- **Grid**: 7 $m_{\rm smbh}$ points, log-spaced across 3 decades centered on N26's own
+  fiducial value, which is included exactly as an exact-reproduction anchor against Phase
+  3/4: $1.264911\times10^5$, $4\times10^5$, $1.264911\times10^6$, $4\times10^6$ (= N26),
+  $1.264911\times10^7$, $4\times10^7$, $1.264911\times10^8\,M_\odot$.
+- **Mass distribution**: held fixed at H18 (0% primordial) — N26's own literal IC (Gate 1a),
+  and the one of the four that actually produces IMBHs at the Milky Way mass, so it's the
+  right choice to test whether *that* result survives at other $m_{\rm smbh}$. Not the
+  Phase 4 log-uniform family, to keep this scan's IC unambiguously "N26's own," not "ours."
+- **Both Eq. 22 readings**, per this project's standing convention of never computing a
+  headline number under only one reading of that still-open ambiguity.
+- **Seeds**: 8 per point from the start (0-7), not a thin first pass — per
+  `paper/methodology.md` Gate 3, this scan is directly comparable to the already-validated
+  Phase 3 $m_{\rm smbh}=4\times10^6$ anchor, so the same $\ge$8-seed bar applies immediately
+  rather than needing a separate refinement pass later.
+- **Two quantities recomputed per grid point, not held fixed** (caught before running, not
+  after): `coulomb_log` $=\ln(m_{\rm smbh}/1\,M_\odot)$ (already flagged in
+  `ClusterConfig.coulomb_log`'s own docstring, `#coulomb-logarithm`); and `a_min_pc` — the
+  inner semimajor-axis sampling bound. `population.A_MIN_PC_DEFAULT` (1e-3 pc) was
+  reverse-engineered so a BH born there takes $\gg10$ Gyr to inspiral via quiescent GW decay
+  *specifically at $m_{\rm smbh}=4\times10^6$*; since that inspiral time scales roughly as
+  $1/m_{\rm smbh}^2$ (from `inspiral.remaining_merger_time_circular`'s mass dependence),
+  holding it fixed across this grid would silently reintroduce the exact prompt-EMRI
+  numerical artifact `A_MIN_PC_DEFAULT` was originally introduced to fix (checked directly:
+  at $m_{\rm smbh}=4\times10^7$, the *original* 1e-3 pc value gives only ~18 Gyr of margin,
+  no longer safely $\gg10$ Gyr). Generalized via the new `population.a_min_safety_bound(m_smbh)`
+  helper (solves for $a_{\rm min}$ analytically from the closed-form $\tau\propto a^4$
+  scaling).
+  $a_{\rm max}$ (0.1 pc, N26's stated focus region) is held fixed, consistent with the
+  "hold structure fixed" choice above — it's part of the region being studied, not a
+  numerical safety margin like $a_{\rm min}$.
+
+**A second, more serious problem found only by actually running the code, not by reasoning
+about it in advance**: letting `a_min_safety_bound` *shrink* `a_min_pc` below
+`A_MIN_PC_DEFAULT` at low $m_{\rm smbh}$ (the first version of this design) is wrong for a
+completely different reason than the one it was designed to fix. `a_min_safety_bound(1.2649
+\times10^5)$ gives $\approx1.68\times10^{-4}$ pc — and at that radius, the *held-fixed*
+stellar density profile ($\rho\propto r^{-\alpha_\star}$, uncapped at small $r$) evaluates to
+$\approx1.25\times10^{10}\,M_\odot/{\rm pc}^3$: about 9236x its own $r_0=0.25$ pc calibration
+value, and about 9x even the already-extreme density at the MW-anchor's $a_{\rm min}=10^{-3}$
+pc. This collapses the stellar-collision timescale and drives the adaptive-timestep loop
+toward its 2,000,000-step ceiling — caught directly as a smoke-test hang (>40 minutes with no
+convergence at $t_{\rm max}=10$ Gyr, and even $t_{\rm max}=0.1$ Gyr didn't converge in 5
+minutes) before any of the real 112-run scan was launched, not discovered after the fact.
+
+**Fix, verified**: $a_{\rm min}$ should only ever *grow* beyond `A_MIN_PC_DEFAULT` (needed at
+high $m_{\rm smbh}$, where quiescent inspiral is faster) and never shrink below it — at low
+$m_{\rm smbh}$, inspiral is naturally slower at any fixed $a$, so the original default is
+already a safe (if conservative) margin, and shrinking it serves no purpose except sampling
+into the density blow-up above. Implemented as `a_min_pc = max(A_MIN_PC_DEFAULT,
+a_min_safety_bound(m_smbh))` in `scripts/phase5_smbh_mass_scan.py`'s `_cluster_config` — this
+formula happens to reduce to exactly `A_MIN_PC_DEFAULT` at the $m_{\rm smbh}=4\times10^6$
+anchor point too (since `a_min_safety_bound(4e6)` $\approx9.45\times10^{-4}<10^{-3}$), so no
+separate special case is needed for bit-for-bit Phase 3/4 reproducibility there. Verified
+directly: the exact same low-mass point that hung for >40 minutes unclamped completes in 27s
+clamped (11,258 steps; 155 mergers; max mass 566 $M_\odot$; 97.9% EMRI — a genuinely
+EMRI-dominated regime at low $m_{\rm smbh}$, not a numerical artifact, now that the density
+pathology is removed). This is exactly the kind of thing this project's culture of
+stress-testing at actual scale (not just deriving formulas on paper) exists to catch —
+see the Phase 2 EMRI-rate investigation and the initial-orbital-properties entry
+(`#initial-orbital-properties`) for the same pattern occurring once already, at the original
+$a_{\rm min}=10^{-4}$ pc choice.
+
+**How to apply**: `scripts/phase5_smbh_mass_scan.py` implements this design;
+`population.a_min_safety_bound` implements the generalized inner-bound calculation (tested
+in `tests/test_population.py::TestAMinSafetyBound`, including a regression test that
+demonstrates the artifact this function avoids). 112 runs total (7 $m_{\rm smbh}$ x 2
+readings x 8 seeds). Results to follow in a new `results/phase5_*.md` once complete.
+
+**Status, end of 2026-07-28 session**: design and code complete, not yet launched. A third,
+separate timing issue turned up in smoke-testing (after the $a_{\rm min}$/density fix
+above): a single seed at $m_{\rm smbh}=4\times10^5$ under `star_only` did not converge
+within 15 minutes, well outside Phase 3's known 600-1740s spread for H18/`star_only`. Likely
+mechanism (not yet confirmed as thoroughly as the $a_{\rm min}$ issue was): holding density
+fixed while lowering $m_{\rm smbh}$ makes velocity dispersion lower *everywhere* in the
+cluster ($\sigma\propto\sqrt{M_\bullet}$, not just at $a_{\rm min}$), boosting
+gravitational-focusing collision efficiency throughout, while `coulomb_log`$=\ln(m_{\rm
+smbh})$ also drops, weakening the relaxation process that normally moderates runaway growth
+— both effects push toward more severe runaway growth, not a numerical artifact this time.
+**Decided with the user**: rather than narrow the grid or chase a timeout, run the full
+grid as designed and record whether each run hits the adaptive loop's 2,000,000-step
+ceiling before reaching 10 Gyr (`hit_step_ceiling` column, added to `run_one`'s output row)
+as data in its own right — "most low-$m_{\rm smbh}$/`star_only` seeds never reach 10 Gyr"
+would itself be a real Phase 5 finding about how runaway growth scales with SMBH mass. Not
+yet launched (session ended before running it) — expect this scan to take substantially
+longer than Phase 3/4's (potentially several hours total), dominated by this corner of the
+grid. Next session: launch `scripts/phase5_smbh_mass_scan.py` in the background, then
+analyze `results/phase5_raw/summary.csv` (including the convergence-rate pattern itself,
+not just the usual `pct_gt_100`/`any_gt_100` columns) once it completes.
+
 ## Still to resolve before Phase 1 (Section 4) is considered fully complete
 
 - Confirm the Eq. 21 exponent discrepancy resolution (1/2 vs printed 1/3) doesn't need
