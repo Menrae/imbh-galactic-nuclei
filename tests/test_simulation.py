@@ -2,7 +2,12 @@ import numpy as np
 import pytest
 
 from imbh_nuclei.config import ClusterConfig, IntegrationConfig, PopulationConfig, SimulationConfig
-from imbh_nuclei.simulation import SimulationResults, run_simulation
+from imbh_nuclei.simulation import (
+    SimulationResults,
+    _cluster_quantities,
+    _relaxation_mass_and_density,
+    run_simulation,
+)
 
 
 def _uniform_mass_sampler(n, rng):
@@ -205,6 +210,85 @@ class TestRelaxationSubstepping:
         r2 = run_simulation(config2, _uniform_mass_sampler, _zero_spin_sampler)
         np.testing.assert_array_equal(r1.population.a, r2.population.a)
         np.testing.assert_array_equal(r1.population.mass, r2.population.mass)
+
+
+class TestRelaxationMassWeighting:
+    """See paper/limitations.md#average-object-mass: Eq. 22's <M_avg>/rho is a genuine,
+    unresolved ambiguity (star-only vs. BH-inclusive), now a first-class config choice
+    (`IntegrationConfig.relaxation_mass_weighting`) rather than hardcoded, as of Phase 4.
+    """
+
+    def _cq(self, a=0.01, config=None):
+        config = config or SimulationConfig()
+        return _cluster_quantities(np.array([a]), config)
+
+    def test_star_only_reduces_to_unit_mass_and_stellar_density(self):
+        config = SimulationConfig(integration=IntegrationConfig(relaxation_mass_weighting="star_only"))
+        cq = self._cq(config=config)
+        mean_object_mass, rho = _relaxation_mass_and_density(cq, config)
+        assert mean_object_mass == 1.0
+        np.testing.assert_array_equal(rho, cq["rho_star"])
+
+    def test_bh_inclusive_gives_heavier_mean_mass_and_higher_density(self):
+        config = SimulationConfig(
+            population=PopulationConfig(mean_bh_mass=25.0),
+            integration=IntegrationConfig(relaxation_mass_weighting="bh_inclusive"),
+        )
+        cq = self._cq(config=config)
+        mean_object_mass, rho = _relaxation_mass_and_density(cq, config)
+        # BH-inclusive <M_avg> is a weighted mean of 1 Msun (stars) and 25 Msun (BHs), so
+        # it must exceed the star-only value of 1 Msun.
+        assert np.all(mean_object_mass > 1.0)
+        assert np.all(mean_object_mass < 25.0)
+        # BH-inclusive rho is total mass density (stars + BHs), so it must exceed rho_star
+        # alone.
+        assert np.all(rho > cq["rho_star"])
+
+    def test_bh_inclusive_gives_shorter_relaxation_timescale_than_star_only(self):
+        # Both readings hold n_star, n_bh, sigma_star fixed; bh_inclusive's larger
+        # rho*<M_avg> product must make t_relax shorter (Eq. 22: t_relax ~ 1/(rho*<M_avg>)).
+        star_only_config = SimulationConfig(
+            population=PopulationConfig(mean_bh_mass=25.0),
+            integration=IntegrationConfig(relaxation_mass_weighting="star_only"),
+        )
+        bh_inclusive_config = SimulationConfig(
+            population=PopulationConfig(mean_bh_mass=25.0),
+            integration=IntegrationConfig(relaxation_mass_weighting="bh_inclusive"),
+        )
+        from imbh_nuclei import relaxation
+
+        cq = self._cq(config=star_only_config)
+        m_star, rho_star = _relaxation_mass_and_density(cq, star_only_config)
+        m_bh, rho_bh = _relaxation_mass_and_density(cq, bh_inclusive_config)
+        t_star_only = relaxation.relaxation_timescale(
+            cq["sigma_star"], rho_star, m_star, star_only_config.cluster.coulomb_log
+        )
+        t_bh_inclusive = relaxation.relaxation_timescale(
+            cq["sigma_star"], rho_bh, m_bh, bh_inclusive_config.cluster.coulomb_log
+        )
+        assert np.all(t_bh_inclusive < t_star_only)
+
+    def test_both_weightings_run_end_to_end(self):
+        for weighting in ("star_only", "bh_inclusive"):
+            config = _small_config(n_bh=40, t_max_gyr=2.0, seed=5, relaxation_mass_weighting=weighting)
+            results = run_simulation(config, _uniform_mass_sampler, _zero_spin_sampler)
+            pop = results.population
+            assert np.all(pop.a[pop.status == "active"] > 0)
+            assert np.all((pop.e >= 0) & (pop.e <= 1))
+
+    def test_bh_inclusive_gives_higher_emri_fraction_than_star_only(self):
+        # Directional regression check for the documented empirical finding
+        # (paper/limitations.md#phase2-emri-rate-high): stronger relaxation under
+        # bh_inclusive should evict more BHs into EMRI than star_only, all else equal.
+        star_only_config = _small_config(
+            n_bh=150, t_max_gyr=10.0, seed=3, relaxation_mass_weighting="star_only"
+        )
+        bh_inclusive_config = _small_config(
+            n_bh=150, t_max_gyr=10.0, seed=3, relaxation_mass_weighting="bh_inclusive"
+        )
+        r_star_only = run_simulation(star_only_config, _uniform_mass_sampler, _zero_spin_sampler)
+        r_bh_inclusive = run_simulation(bh_inclusive_config, _uniform_mass_sampler, _zero_spin_sampler)
+        assert len(r_bh_inclusive.emri_log) >= len(r_star_only.emri_log)
 
 
 class TestCapturePathwayFires:

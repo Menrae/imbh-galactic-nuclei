@@ -86,6 +86,26 @@ def _cluster_quantities(a: np.ndarray, config: SimulationConfig) -> dict:
     )
 
 
+def _relaxation_mass_and_density(cq: dict, config: SimulationConfig) -> tuple[np.ndarray | float, np.ndarray]:
+    """Eq. 22's <M_avg>/rho, resolved per `IntegrationConfig.relaxation_mass_weighting`.
+
+    Two textually-defensible readings, both empirically tested and neither a clean match
+    to Table 1 -- see paper/limitations.md#average-object-mass and
+    config.IntegrationConfig.relaxation_mass_weighting's docstring for the full trace.
+    Does NOT apply to Eq. 23 (segregation_timescale), which N26 explicitly writes as
+    star-only regardless of this choice.
+    """
+    weighting = config.integration.relaxation_mass_weighting
+    if weighting == "star_only":
+        return 1.0, cq["rho_star"]
+    if weighting == "bh_inclusive":
+        mean_bh_mass = config.population.mean_bh_mass
+        mean_object_mass = relaxation.average_object_mass(cq["n_star"], cq["n_bh_density"], mean_bh_mass)
+        rho_total = cq["rho_star"] + cq["n_bh_density"] * mean_bh_mass
+        return mean_object_mass, rho_total
+    raise ValueError(f"Unknown relaxation_mass_weighting: {weighting!r}")
+
+
 def _timescales(pop: PopulationState, mask: np.ndarray, config: SimulationConfig) -> dict:
     c = config.cluster
     a = pop.a[mask]
@@ -97,13 +117,8 @@ def _timescales(pop: PopulationState, mask: np.ndarray, config: SimulationConfig
     t_gw = gw_capture.capture_timescale(
         mass, config.population.mean_bh_mass, cq["sigma_bh"], cq["n_bh_density"]
     )
-    # Eq. 22's <M_avg>/rho: star-only (mean_object_mass=1 Msun, rho=rho_star) -- adopted
-    # as the official choice despite a genuine, documented textual tension with a
-    # BH-inclusive reading; see paper/limitations.md#average-object-mass for the full
-    # trace of both readings and why star-only was adopted anyway (it fixes the original
-    # near-zero-merger defect; BH-inclusive was empirically tested and reproduces that
-    # same defect almost exactly).
-    t_relax = relaxation.relaxation_timescale(cq["sigma_star"], cq["rho_star"], 1.0, c.coulomb_log)
+    mean_object_mass, rho = _relaxation_mass_and_density(cq, config)
+    t_relax = relaxation.relaxation_timescale(cq["sigma_star"], rho, mean_object_mass, c.coulomb_log)
     t_seg = relaxation.segregation_timescale(mass, cq["sigma_star"], cq["rho_star"], c.coulomb_log)
     tau_gw_circular = inspiral.remaining_merger_time_circular(mass, c.m_smbh, a)
 
@@ -368,12 +383,14 @@ def _local_t_relax(a: np.ndarray, config: SimulationConfig) -> np.ndarray:
     used to re-derive the relaxation-kick amplitude partway through a substepped walk
     (see _apply_relaxation_walk), mirroring exactly the t_relax calculation in
     _timescales but callable at an arbitrary (mid-walk) `a` rather than only the
-    start-of-timestep value. Star-only <M_avg>/rho -- see the matching comment in
-    _timescales and paper/limitations.md#average-object-mass.
+    start-of-timestep value. <M_avg>/rho resolved per
+    `config.integration.relaxation_mass_weighting` -- see the matching helper in
+    _timescales (_relaxation_mass_and_density) and paper/limitations.md#average-object-mass.
     """
     c = config.cluster
     cq = _cluster_quantities(a, config)
-    return relaxation.relaxation_timescale(cq["sigma_star"], cq["rho_star"], 1.0, c.coulomb_log)
+    mean_object_mass, rho = _relaxation_mass_and_density(cq, config)
+    return relaxation.relaxation_timescale(cq["sigma_star"], rho, mean_object_mass, c.coulomb_log)
 
 
 def _apply_relaxation_walk(pop, active_idx, still_active_mask, dt, config, rng, t_global_yr):

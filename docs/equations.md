@@ -193,6 +193,24 @@ the same mechanism underlying the Barausse & Rezzolla $\ell$ term, Section 4.1 a
 **Implementation**: `imbh_nuclei.initial_conditions.{sample_k20_mass, sample_h18_mass,
 apply_primordial_mergers, sample_k20_plus_m, sample_h18_plus_m, get_samplers}`.
 
+### Phase 4 mass-scale scan family
+
+N26 gives only these four discrete points and explicitly flags (Section 5.4) that whether a
+mass distribution *between* K20 and H18 consistently produces IMBHs is unresolved future work
+— no such family is specified anywhere in the paper. For Phase 4's threshold scan, we
+introduce `sample_log_uniform_mass(n, rng, m_min, m_max)`: the same log-uniform functional
+form as H18 (`sample_h18_mass` is the special case $m_{\rm min}=6,\ m_{\rm max}=100$),
+generalized to scan the upper bound $m_{\rm max}$ alone, holding $m_{\rm min}=6\,M_\odot$
+fixed. This is our own design choice, not N26's — flagged to the user and confirmed before use
+(see `paper/limitations.md#phase4-mass-family-scan` for the full reasoning, alternatives
+considered, and the explicit caveat that this family does not reproduce K20's true
+reconstructed shape at its low-$m_{\rm max}$ end, only H18 exactly at its high end).
+`log_uniform_mean(m_min, m_max)` gives this family's exact closed-form mean (no Monte Carlo
+estimate needed, unlike K20).
+
+**Implementation**: `imbh_nuclei.initial_conditions.{sample_log_uniform_mass,
+log_uniform_mean, get_log_uniform_samplers}`.
+
 ---
 
 ## Section 4.1 — GW Capture between Single Black Holes
@@ -516,13 +534,26 @@ above), confirming the numerical prefactor 0.34 and citing Binney & Tremaine 200
 
 **Resolved (revised)** (full trace in `paper/limitations.md#average-object-mass` and
 `#coulomb-logarithm`): both $\langle M_{\rm avg}\rangle$/$\rho$ in Eq. 22 and $\ln\Lambda$
-were re-investigated from primary sources during the Phase 3 EMRI-rate fix. Current
-implementation: $\langle M_{\rm avg}\rangle=1\,M_\odot$, $\rho=\rho_\star$ (star-only, **not**
-the BH-inclusive weighted average originally adopted here), and $\ln\Lambda = \ln(M_\bullet/1\,
-M_\odot) \approx 15.2$ (not the earlier placeholder 10.0). Both choices remain genuinely
-contested — see the limitations.md entries for the full evidence trail, including an
-unresolved tension between two textually-defensible readings of $\langle M_{\rm avg}\rangle$
-that was empirically tested both ways and did not fully resolve.
+were re-investigated from primary sources during the Phase 3 EMRI-rate fix. $\ln\Lambda =
+\ln(M_\bullet/1\,M_\odot) \approx 15.2$ (not the earlier placeholder 10.0) is settled — see
+`#coulomb-logarithm` for why. $\langle M_{\rm avg}\rangle$/$\rho$ remains genuinely contested
+and, as of Phase 4, is a first-class config choice rather than a hardcoded assumption:
+`IntegrationConfig.relaxation_mass_weighting`, one of:
+
+- `"star_only"` (default, matches Phase 3's Table 1 comparison): $\langle M_{\rm
+  avg}\rangle=1\,M_\odot$, $\rho=\rho_\star$.
+- `"bh_inclusive"`: $\langle M_{\rm avg}\rangle$ = the number-density-weighted mean of stars
+  and background BHs (`relaxation.average_object_mass`), $\rho=\rho_\star + n_{\rm
+  BH}\langle m_{\rm BH}\rangle$ (total mass density).
+
+`imbh_nuclei.simulation._relaxation_mass_and_density` resolves this per-config and feeds both
+`_timescales` (start-of-timestep $t_{\rm relax}$) and `_local_t_relax` (mid-substep
+re-evaluation during the relaxation walk — see below). Eq. 23's $t_{\rm seg}$ is unaffected by
+this switch either way, since N26 states it as star-only explicitly regardless. Both choices
+were empirically tested against Table 1 (Phase 3, star-only; a dedicated follow-up
+investigation, bh-inclusive) and neither is a clean match — see the limitations.md entry for
+the full evidence trail. Phase 4's threshold scan is required to check its conclusions against
+both settings of this toggle rather than only the default.
 
 ### Orbital random walk from relaxation
 

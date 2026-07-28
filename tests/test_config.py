@@ -22,6 +22,19 @@ def test_invalid_initial_distribution_rejected():
         PopulationConfig(initial_mass_distribution="not-a-real-distribution")
 
 
+def test_relaxation_mass_weighting_defaults_to_star_only():
+    assert IntegrationConfig().relaxation_mass_weighting == "star_only"
+
+
+def test_relaxation_mass_weighting_accepts_bh_inclusive():
+    assert IntegrationConfig(relaxation_mass_weighting="bh_inclusive").relaxation_mass_weighting == "bh_inclusive"
+
+
+def test_invalid_relaxation_mass_weighting_rejected():
+    with pytest.raises(ValueError):
+        IntegrationConfig(relaxation_mass_weighting="not-a-real-weighting")
+
+
 def test_roundtrip_through_yaml(tmp_path):
     cfg = SimulationConfig(
         cluster=ClusterConfig(m_smbh=1.0e5),

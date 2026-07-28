@@ -24,3 +24,4 @@ integration:
   timestep_safety_factor: 0.1
   seed: 0
   relaxation_substeps: 20
+  relaxation_mass_weighting: star_only  # see IntegrationConfig docstring; genuinely contested, see paper/limitations.md#average-object-mass

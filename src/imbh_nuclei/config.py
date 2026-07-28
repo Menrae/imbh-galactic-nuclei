@@ -10,12 +10,16 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 
 #: Valid initial BH mass/spin distributions from Newton et al. 2026, Table 1.
 VALID_INITIAL_DISTRIBUTIONS = ("K20", "K20+M", "H18", "H18+M")
+
+#: Valid choices for IntegrationConfig.relaxation_mass_weighting -- see its docstring
+#: and paper/limitations.md#average-object-mass.
+VALID_RELAXATION_MASS_WEIGHTINGS = ("star_only", "bh_inclusive")
 
 
 @dataclass
@@ -110,6 +114,36 @@ class IntegrationConfig:
     #: aggregation (implicitly holding these fixed for the whole span) was wrong, and why
     #: this coarser-than-per-orbit substep count is our practical middle ground.
     relaxation_substeps: int = 20
+    #: Which reading of Eq. 22's <M_avg>/rho ("the average object mass"/"their mass
+    #: density") to use in the two-body relaxation timescale -- a genuine, unresolved
+    #: textual ambiguity in Newton et al. 2026, empirically tested both ways during the
+    #: Phase 3 EMRI-rate fix and found to trade one failure mode for another rather than
+    #: settle cleanly (see paper/limitations.md#average-object-mass for the full evidence
+    #: trail). One of VALID_RELAXATION_MASS_WEIGHTINGS:
+    #:   "star_only" (default, matches the paper's fiducial-run comparison in Phase 3):
+    #:     <M_avg>=1 Msun, rho=rho_star -- follows S. C. Rose et al. 2022 Eq. 10's
+    #:     explicit "single-mass system" statement (the base model N26 extends). Keeps
+    #:     the GW-capture merger channel active; produces a heavy runaway-growth tail in
+    #:     the H18-family ICs (see results/phase3_validation_2026-07-26.md).
+    #:   "bh_inclusive": <M_avg> = number-density-weighted mean of stars and background
+    #:     BHs (relaxation.average_object_mass), rho = rho_star + n_BH*mean_bh_mass --
+    #:     follows Eq. 22's own text, which drops Rose et al. 2022's "single-mass system"
+    #:     qualifier and introduces the two-component BH density profile (Eq. 2)
+    #:     specifically to support the new GW-capture channel. Strong relaxation under
+    #:     this reading suppresses the runaway tail but also reproduces the original
+    #:     Phase 2 defect (~69% EMRI, ~0 mergers in 10 Gyr).
+    #: This does NOT affect Eq. 23's mass-segregation timescale, which N26 explicitly
+    #: writes as star-only regardless (relaxation.segregation_timescale is unaffected by
+    #: this field).
+    relaxation_mass_weighting: Literal["star_only", "bh_inclusive"] = "star_only"
+
+    def __post_init__(self) -> None:
+        if self.relaxation_mass_weighting not in VALID_RELAXATION_MASS_WEIGHTINGS:
+            raise ValueError(
+                f"relaxation_mass_weighting must be one of "
+                f"{VALID_RELAXATION_MASS_WEIGHTINGS}, got "
+                f"{self.relaxation_mass_weighting!r}"
+            )
 
 
 @dataclass

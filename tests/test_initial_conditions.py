@@ -5,11 +5,14 @@ from imbh_nuclei.initial_conditions import (
     H18_MASS_MAX,
     H18_MASS_MIN,
     apply_primordial_mergers,
+    get_log_uniform_samplers,
     get_samplers,
+    log_uniform_mean,
     sample_h18_mass,
     sample_h18_plus_m,
     sample_k20_mass,
     sample_k20_plus_m,
+    sample_log_uniform_mass,
     zero_spin,
 )
 
@@ -105,6 +108,49 @@ class TestKPlusMAndHPlusM:
         mass, chi = sample_h18_plus_m(1000, rng)
         assert len(mass) == 1000
         assert mass.max() > H18_MASS_MAX
+
+
+class TestLogUniformMassScan:
+    """Phase 4's mass-scale scan family -- see sample_log_uniform_mass's docstring and
+    paper/limitations.md#phase4-mass-family-scan.
+    """
+
+    def test_reduces_to_h18_at_h18_bounds(self):
+        # sample_h18_mass IS sample_log_uniform_mass(m_min=6, m_max=100) -- confirm the
+        # generalization reproduces the special case exactly (same rng stream).
+        m_h18 = sample_h18_mass(1000, np.random.default_rng(0))
+        m_generic = sample_log_uniform_mass(1000, np.random.default_rng(0), H18_MASS_MIN, H18_MASS_MAX)
+        np.testing.assert_array_equal(m_h18, m_generic)
+
+    def test_within_bounds(self):
+        rng = np.random.default_rng(1)
+        m = sample_log_uniform_mass(10000, rng, m_min=6.0, m_max=25.0)
+        assert np.all(m >= 6.0) and np.all(m <= 25.0)
+
+    def test_smaller_m_max_gives_smaller_draws_on_average(self):
+        rng = np.random.default_rng(2)
+        m_low = sample_log_uniform_mass(10000, rng, m_min=6.0, m_max=16.0)
+        m_high = sample_log_uniform_mass(10000, rng, m_min=6.0, m_max=100.0)
+        assert m_low.mean() < m_high.mean()
+
+    def test_log_uniform_mean_matches_h18_measured_mean(self):
+        # Phase 3 measured H18's true Monte Carlo mean as 33.396 (N=2e6) -- the closed
+        # form should land within MC noise of that (paper/limitations.md#mean-bh-mass-placeholder).
+        assert log_uniform_mean(H18_MASS_MIN, H18_MASS_MAX) == pytest.approx(33.396, abs=0.05)
+
+    def test_log_uniform_mean_matches_empirical_sample_mean(self):
+        rng = np.random.default_rng(3)
+        m = sample_log_uniform_mass(2_000_000, rng, m_min=6.0, m_max=40.0)
+        assert m.mean() == pytest.approx(log_uniform_mean(6.0, 40.0), rel=1e-2)
+
+    def test_get_log_uniform_samplers_signature(self):
+        mass_sampler, spin_sampler = get_log_uniform_samplers(m_max=40.0)
+        rng = np.random.default_rng(0)
+        mass = mass_sampler(100, rng)
+        chi = spin_sampler(100, rng)
+        assert mass.shape == (100,)
+        assert np.all(chi == 0.0)
+        assert np.all(mass <= 40.0)
 
 
 class TestGetSamplers:

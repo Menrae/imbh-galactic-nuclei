@@ -55,6 +55,39 @@ def sample_h18_mass(n: int, rng: np.random.Generator) -> np.ndarray:
     return 10.0**log_m
 
 
+def sample_log_uniform_mass(n: int, rng: np.random.Generator, m_min: float, m_max: float) -> np.ndarray:
+    """Log-uniform mass distribution in [m_min, m_max] Msun, i.e. dN/dm ~ m^-1 -- the
+    same functional form as H18 (`sample_h18_mass` is the special case
+    m_min=H18_MASS_MIN, m_max=H18_MASS_MAX), generalized to an arbitrary upper bound.
+
+    Introduced for Phase 4's initial-mass-distribution scan: N26 only gives four
+    discrete initial conditions (K20, K20+M, H18, H18+M) and explicitly flags "whether
+    there is a mass distribution between our lower and upper limits that consistently
+    produces IMBHs" as future work (Section 5.4) without proposing a family to scan.
+    This family holds m_min fixed at H18's own value and scans only m_max, so it
+    reproduces H18 exactly at m_max=100 -- it does NOT reproduce K20's true
+    reconstructed shape (K20_BIN_EDGES/K20_BIN_WEIGHTS is concentrated/non-log-uniform
+    in 7-16 Msun, not log-uniform) at the low end; it is an approximate low-mass anchor,
+    not a K20 substitute. See paper/limitations.md#phase4-mass-family-scan.
+    """
+    log_m = rng.uniform(np.log10(m_min), np.log10(m_max), size=n)
+    return 10.0**log_m
+
+
+def log_uniform_mean(m_min: float, m_max: float) -> float:
+    """Closed-form mean of the log-uniform distribution on [m_min, m_max]:
+    integral of m * (1/m)/ln(m_max/m_min) dm = (m_max - m_min) / ln(m_max/m_min).
+
+    Used as `PopulationConfig.mean_bh_mass` for `sample_log_uniform_mass` draws --
+    exact, not a Monte Carlo estimate (unlike K20's reconstructed sampler, which has no
+    closed form and needs `PopulationConfig.mean_bh_mass` set from a large-N Monte
+    Carlo estimate instead; see paper/limitations.md#mean-bh-mass-placeholder). Sanity
+    check: log_uniform_mean(6.0, 100.0) == 33.40..., matching H18's independently
+    Monte-Carlo-measured mean (33.396) to within MC noise.
+    """
+    return (m_max - m_min) / np.log(m_max / m_min)
+
+
 def zero_spin(n: int, rng: np.random.Generator) -> np.ndarray:
     """K20 and H18 (without mergers) are single, nonspinning from birth (N26 Section 3)."""
     return np.zeros(n)
@@ -190,6 +223,19 @@ class _PairedSampler:
         chi = self._pending_chi
         self._pending_chi = None
         return chi
+
+
+def get_log_uniform_samplers(m_max: float, m_min: float = H18_MASS_MIN):
+    """Return (mass_sampler, spin_sampler) for the Phase 4 log-uniform mass-scan family
+    (see sample_log_uniform_mass), with signature (n, rng) -> ndarray matching
+    get_samplers' convention. Nonspinning at birth (chi=0), same as the base K20/H18
+    (no "+M" variant) -- Phase 4's first-pass scan defers the primordial-merger axis to
+    a follow-up pass (see paper/limitations.md#phase4-mass-family-scan).
+    """
+    def mass_sampler(n: int, rng: np.random.Generator) -> np.ndarray:
+        return sample_log_uniform_mass(n, rng, m_min, m_max)
+
+    return mass_sampler, zero_spin
 
 
 def get_samplers(name: str):

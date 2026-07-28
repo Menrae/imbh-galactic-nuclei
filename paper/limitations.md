@@ -5,6 +5,12 @@ paper ambiguity, or deliberately-unmodeled effect gets a line here as soon as it
 not retrofitted at the end. Mirrors the "Open items log" in `docs/equations.md` for
 equation-specific issues; this file is broader (methodology, validation, scope).
 
+Starting with Phase 4, secondary findings (patterns discovered in our own output, beyond
+plain Table 1 agreement/disagreement, especially ones touching an ambiguity or apparent
+inconsistency in N26's own text) go through the explicit checklist in
+`paper/methodology.md` before being stated as a *result* rather than logged as a
+*preliminary observation* here.
+
 As of this pass, the primary source PDF (`references/Newton_2026_ApJ_1006_184.pdf`) is
 available directly and has been read page-by-page (including page-image crops for equations
 that garble under plain-text extraction). Items below previously flagged as "paper text not
@@ -117,12 +123,21 @@ $m_{\rm cap} = \min(\dot m_{\rm BH}\times t_{\star,\rm cross},\ 1\,M_\odot)$.
 ## Average object mass in Eq. 22 {#average-object-mass}
 
 **Revised during the Phase 3 EMRI-rate fix (see `#phase2-emri-rate-high` below for the full
-diagnostic trail). This entry supersedes the original resolution below the line.** Current
-implementation: **star-only**, $\langle M_{\rm avg}\rangle = 1\,M_\odot$, $\rho=\rho_\star$ —
-adopted despite a genuine, unresolved textual tension with the BH-inclusive reading, because
-it was empirically tested against the alternative and is the one that keeps the merger
+diagnostic trail). Revised again at the start of Phase 4 to make this a config choice.**
+Default: **star-only**, $\langle M_{\rm avg}\rangle = 1\,M_\odot$, $\rho=\rho_\star$ — adopted
+as the default despite a genuine, unresolved textual tension with the BH-inclusive reading,
+because it was empirically tested against the alternative and is the one that keeps the merger
 channel alive (see below). This is flagged as **open**, not settled — a future pass with more
 information (or direct correspondence with N26's authors) could overturn it.
+
+**As of Phase 4**: this is no longer hardcoded. `IntegrationConfig.relaxation_mass_weighting`
+(`"star_only"` default or `"bh_inclusive"`) selects between the two readings, resolved by
+`imbh_nuclei.simulation._relaxation_mass_and_density` and consumed by both `_timescales` and
+`_local_t_relax`. This is a plumbing change only, not a new physics decision — both code paths
+already existed and were already empirically tested (see `#phase2-emri-rate-high`); Phase 4's
+critical-mass-threshold scan is required to run under both settings and report whether its
+conclusions are robust to this choice, per the recommendation at the end of the "searching for
+a middle ground" entry below.
 
 **The tension, in full:**
 
@@ -168,11 +183,12 @@ either, its absence here doesn't explain why N26 reports a bounded growth ceilin
 gives no numeric ejection-fraction or ejection-rate figure for its fiducial runs to check our
 own ejection counts against, so that channel could not be verified or ruled out quickly.
 
-**How to apply**: `imbh_nuclei.simulation._timescales` and `_local_t_relax` implement the
-star-only choice explicitly (not via `relaxation.average_object_mass`, which is now unused in
-the simulation loop but kept for its own unit tests and for any future revisit of this
-question). `imbh_nuclei.relaxation.segregation_timescale` (Eq. 23) was star-only from the
-start and is unaffected by this entry.
+**How to apply**: `imbh_nuclei.simulation._timescales` and `_local_t_relax` both call
+`_relaxation_mass_and_density(cq, config)`, which branches on
+`config.integration.relaxation_mass_weighting`; `relaxation.average_object_mass` is used
+directly for the `"bh_inclusive"` branch (previously flagged as unused — no longer true).
+`imbh_nuclei.relaxation.segregation_timescale` (Eq. 23) was star-only from the start,
+independent of this config field, and is unaffected by this entry.
 
 ---
 
@@ -562,6 +578,107 @@ scan under both readings and report whether the *location* of any threshold foun
 this choice — which is likely to be more informative than the exact tail statistics anyway,
 since the bulk-population behavior (which is what a threshold-detection question mostly
 depends on) is far less sensitive to this choice than the extreme maximum is.
+
+**Adopted for Phase 4**: option (b). `IntegrationConfig.relaxation_mass_weighting` is now a
+first-class config field (see `#average-object-mass` above); Phase 4's threshold scan runs
+under both settings and reports whether the threshold location is robust to this choice.
+
+## Phase 4 — mass-distribution scan family and IMBH definition {#phase4-mass-family-scan}
+
+N26 explicitly leaves open (Section 5.4, confirmed by direct PDF read): "whether there is a
+mass distribution between our lower and upper limits that consistently produces IMBHs" — i.e.
+a continuous family connecting the K20-like (never produces IMBHs) and H18 (sometimes does)
+regimes, which the paper itself never specifies (it only gives the four discrete K20/K20+M/
+H18/H18+M points). Designing one is therefore a genuine judgment call, flagged to the user
+before committing to it (2026-07-27) rather than picked silently. Options considered and the
+resolution chosen:
+
+- **Adopted**: log-uniform mass distribution on $[6, m_{\rm max}]\,M_\odot$ — H18's own stated
+  functional form ("uniform in logspace... $dN/dm\sim m^{-1}$"), generalized by scanning only
+  the upper bound $m_{\rm max}$ from 16 (K20's rough upper edge) to 100 (exact H18). A single
+  scannable parameter that exactly reproduces H18 at the top of the range. **Caveat, explicit**:
+  this does *not* reproduce K20's true reconstructed shape (`K20_BIN_EDGES`/`K20_BIN_WEIGHTS`,
+  concentrated/non-log-uniform in 7-16 $M_\odot$ — see `#k20-reconstruction`) at the bottom of
+  the range; it is an approximate low-mass anchor, not a K20 substitute. The exact K20/K20+M/
+  H18/H18+M points keep their Phase 3 results (`results/phase3_validation_2026-07-26.md`) as
+  independent validation anchors alongside the scan, not superseded by it.
+- **Considered, not adopted**: a mixture blend (draw each BH from the *true* K20 sampler with
+  probability $p$, true H18 sampler with probability $1-p$). Would exactly reproduce both real
+  endpoints, but produces a bimodal mass function at intermediate $p$ and treats the scan
+  parameter as a population-mixture fraction rather than a mass-scale parameter — judged a less
+  natural stand-in for "a cluster's initial mass distribution" than a single smooth family.
+- **Mean BH mass**: unlike K20 (no closed form, `PopulationConfig.mean_bh_mass` needs a
+  large-$N$ Monte Carlo estimate per `#mean-bh-mass-placeholder`), the log-uniform family has
+  an exact closed-form mean, $(m_{\rm max}-m_{\rm min})/\ln(m_{\rm max}/m_{\rm min})$
+  (`initial_conditions.log_uniform_mean`) — confirmed to match H18's independently
+  Monte-Carlo-measured mean (33.396) at $m_{\rm max}=100$, avoiding that whole class of bug.
+- **Primordial-binary-merger fraction**: deferred to a follow-up, zoomed-in second pass near
+  wherever the first pass finds a threshold, rather than scanned as a second axis in the first
+  pass — confirmed with the user given H18 alone (0% primordial mergers) already produces
+  IMBHs (Table 1: 7.8%), so this axis is not required to see IMBH formation the way the
+  mass-scale axis is, and adding it as a full second axis would double the first pass's compute
+  cost for a question that's cheaper to answer locally once the threshold's rough location is
+  known.
+- **IMBH definition**: N26 Section 5.4's own definition, confirmed directly from the PDF text
+  ("defined as a BH with mass > 100 $M_\odot$") — exactly Table 1's "% BHs > 100 $M_\odot$"
+  column, so scan results stay directly comparable to the validated Phase 3 numbers. Primary
+  outcome: % of the $N=1000$ population exceeding 100 $M_\odot$. Secondary: a strict binary "did
+  any BH cross 100 $M_\odot$ at all" indicator per run, since Phase 3 found K20 gives exactly 0%
+  across all 6 seeds tested (3 K20 + 3 K20+M) — the binary indicator may show a cleaner
+  threshold than the continuous fraction, which can be dominated by seed-to-seed noise at N=1000.
+- **Grid/seeds/compute budget**: 9 $m_{\rm max}$ points (log-spaced, 16-100), 3 seeds (0,1,2,
+  matching Phase 3's convention), both Eq. 22 readings = 54 runs total. Estimated 1.5-2.5 hours
+  wall-clock at 8 parallel workers, based on Phase 3's measured per-run timings (K20-like ~450s,
+  H18-like 600-1740s under star-only; bh_inclusive expected faster, since it does not exhibit
+  the runaway-growth tail — see `#phase2-emri-rate-high`).
+
+**How to apply**: `scripts/phase4_mass_threshold_scan.py` implements this design;
+`initial_conditions.sample_log_uniform_mass`/`log_uniform_mean`/`get_log_uniform_samplers`
+implement the mass family. Results and the resulting threshold analysis (or lack thereof) to
+be logged in `results/` once the scan completes, per the project's standing convention.
+
+**Results (2026-07-27, `results/phase4_mass_threshold_scan_2026-07-27.md`)**: the scan ran —
+54/54 runs completed, 4.3 CPU-hours, ~0.54 hr wall-clock (faster than estimated; `bh_inclusive`
+runs were cheap, ~25-33s each, since they never enter the runaway-growth regime). Headline
+finding: **a critical-mass threshold exists under `star_only`** (turns on around $m_{\rm
+max}\approx25$-$32\,M_\odot$, well below H18's own 100 $M_\odot$, then grows smoothly to H18's
+12.7%) **but is essentially absent under `bh_inclusive`** (flat 0.0% for $m_{\rm max}\le79.5$,
+only a marginal 0.1-0.3% even at $m_{\rm max}=100$ exactly). This directly falsifies this
+entry's own closing hypothesis, immediately below — see the correction there.
+
+**Validation status (per `paper/methodology.md`)**: the threshold's *existence* (a robust
+sensitivity to the Eq. 22 reading) graduated to a result immediately — see the worked
+scorecard at the end of `methodology.md`. The specific *location* (25-32 $M_\odot$) did not:
+it rested on a single 1-of-3 seed flip at $m_{\rm max}=25.3$ (Gate 3 open). A dedicated
+follow-up pass (`scripts/phase4b_threshold_refinement.py`, 31 new `star_only` runs, 5 grid
+points in the band at 8 seeds each) was run specifically to close that gate before the
+location claim is treated as final.
+
+**Outcome, 2026-07-28: Gate 3 closed, and the original location claim was itself corrected,
+not just tightened.** With 8 seeds instead of 3, $m_{\rm max}=31.8$ — which pass 1's 3/3
+sample made look fully saturated — turned out to produce zero IMBHs in 2 of 8 seeds (75%,
+95% CI 41-93%). The "any IMBH forms" probability rises smoothly from 0% ($m_{\rm max}=20.1$)
+to 75% (28.4-31.8) without saturating anywhere in the band, with heavily-overlapping Wilson
+CIs between adjacent points — i.e. the honest answer is **a gradual crossover region (roughly
+20-32 $M_\odot$), not a sharp threshold**, which directly answers the sharper of N26's own two
+framings of the open question (is the transition sharp or gradual — Section 5.4, also
+`PROJECT_OVERVIEW.md`'s framing). Full data and Wilson CIs:
+`results/phase4_mass_threshold_scan_2026-07-27.md`'s "Pass 2" section. This is exactly the
+outcome Gate 3 exists to catch — a thin sample (n=3) manufactured an apparently-sharp
+transition that more seeds (n=8) showed was actually gradual and unsaturated even at its
+upper edge.
+
+**Correction to the "likely more informative... bulk-population behavior... far less sensitive"
+claim two paragraphs above**: that claim does not hold for the IMBH-formation question. "% BHs
+> 100 $M_\odot$" — a bulk-population statistic, not a single extreme order statistic — swings
+from a clear, gradually-developing 0%→12.7% signal under `star_only` to flat zero under
+`bh_inclusive` across the *entire* scanned mass range, not just at the specific H18 point
+checked during the original investigation. The reason is structural: forming an IMBH by either
+channel requires a BH to survive long enough in the dense inner region to grow, and survival
+time against EMRI ejection is exactly what this ambiguity controls — so IMBH-formation
+questions are about as sensitive to this choice as they could be, not a case where the
+ambiguity washes out. Any Phase 4/5 claim about where a critical-mass threshold sits must state
+which Eq. 22 reading it assumes.
 
 ## Still to resolve before Phase 1 (Section 4) is considered fully complete
 
