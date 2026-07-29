@@ -51,7 +51,7 @@ The project runs in phases. Roughly:
 | 2 | The main simulation loop that ties the physics together | Done, one known calibration issue (see below) |
 | 3 | Plugging in the paper's actual starting conditions and checking our numbers against theirs | Done |
 | 4 | The centerpiece: mapping out where the "critical mass" transition actually is | Substantively answered — three passes complete, see below |
-| 5 | Does this hold up for supermassive black holes of other sizes? | Not started |
+| 5 | Does this hold up for supermassive black holes of other sizes? | Substantively answered — see below |
 | 6 | Universe-wide detection-rate estimate | Not started |
 | 7 | Sensitivity to a cluster-shape assumption (optional, time permitting) | Not started |
 
@@ -62,7 +62,8 @@ mergers, black holes falling into the central black hole, black holes getting ki
 out of the cluster entirely — runs end to end. We've also built the paper's four
 specific starting-condition recipes (see "K20/H18" below), validated all four against
 the paper's published table, and used that validated pipeline to run all three planned
-passes of Phase 4's critical-mass-threshold scan (see below).
+passes of Phase 4's critical-mass-threshold scan and Phase 5's SMBH-mass generalization
+scan (see below) — completing both of the paper's own stated open questions.
 
 ## What we've learned so far
 
@@ -135,6 +136,25 @@ directly (not guessing) turned up some genuinely useful findings:
   changes the whole population's mass by roughly 12% — a much bigger lever on the same
   underlying growth process, so it's not surprising the smaller lever barely moves the
   needle.
+- **Phase 5 asked the paper's other open question — does any of this hold up for
+  supermassive black holes other than the Milky Way's — and the answer is yes, with one
+  striking, tightly-scoped exception.** Scanning 7 central-black-hole masses spanning three
+  decades (about 30x lighter to 30x heavier than the Milky Way's), every single one of 56
+  trial runs under the mass-weighting reading that keeps the merger channel alive produced
+  an IMBH, at every mass tested — the paper's headline result is not a Milky Way-specific
+  coincidence. But a genuinely new problem turned up in the process, and its shape is
+  surprising: rather than "smaller central black hole = worse runaway growth" (the intuitive
+  guess), the runaway-growth problem peaks in a specific band 3-10x below the Milky Way's
+  own mass, where individual black holes snowballed to *millions* of solar masses — in
+  several cases outgrowing the central black hole they were orbiting — while both the
+  lightest central black hole tested and everything at or above the Milky Way's own mass
+  stayed comparatively tame. The mechanism traces to two competing effects (how efficiently
+  loose objects get flung into oblivion vs. how efficiently growing black holes snowball)
+  that happen to cancel out at both ends of the range but not in the middle. This result
+  comes with an explicit asterisk: it assumes a real lighter-mass galaxy's stellar
+  environment looks exactly like a shrunk-down copy of the Milky Way's, which is a modeling
+  choice we made explicitly (the paper gives no guidance either way), not something the
+  paper itself claims.
 
 None of this is a knock on the original paper — this level of "the details live in
 five other papers" is completely normal for how physics research is written. It just
@@ -155,8 +175,14 @@ merger axis. Two lower-value refinements remain explicitly open but deliberately
 pursued further (more seeds confirming the apparently-saturated 63-100 M☉ end is
 genuinely deterministic; extending the "no threshold" `bh_inclusive` finding past
 $m_{\rm max}=100\,M_\odot$, outside the paper's own studied mass regime) — see
-`results/phase4_mass_threshold_scan_2026-07-27.md`'s Caveats. Next up: Phase 5, testing
-whether the result holds for supermassive black holes of other masses.
+`results/phase4_mass_threshold_scan_2026-07-27.md`'s Caveats. Phase 5 (does the result hold
+for supermassive black holes of other masses) is now also substantively answered — see
+`results/phase5_smbh_mass_scan_2026-07-28.md` — completing both of N26's own Section 5.4
+open questions. Phases 6 (rate forecast) and 7 (cluster-shape sensitivity) remain explicitly
+out of scope for now; the natural next step is a single external-facing summary document for
+outreach to N26's authors, covering validation status plus the project's two most concrete,
+still-open findings (the Eq. 21 spin-exponent discrepancy and the Eq. 22 $\langle M_{\rm
+avg}\rangle$/$\rho$ ambiguity), framed as direct questions rather than blockers.
 
 ## Where to look for more detail
 

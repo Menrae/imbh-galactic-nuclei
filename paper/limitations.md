@@ -820,26 +820,54 @@ in `tests/test_population.py::TestAMinSafetyBound`, including a regression test 
 demonstrates the artifact this function avoids). 112 runs total (7 $m_{\rm smbh}$ x 2
 readings x 8 seeds). Results to follow in a new `results/phase5_*.md` once complete.
 
-**Status, end of 2026-07-28 session**: design and code complete, not yet launched. A third,
-separate timing issue turned up in smoke-testing (after the $a_{\rm min}$/density fix
-above): a single seed at $m_{\rm smbh}=4\times10^5$ under `star_only` did not converge
-within 15 minutes, well outside Phase 3's known 600-1740s spread for H18/`star_only`. Likely
-mechanism (not yet confirmed as thoroughly as the $a_{\rm min}$ issue was): holding density
-fixed while lowering $m_{\rm smbh}$ makes velocity dispersion lower *everywhere* in the
-cluster ($\sigma\propto\sqrt{M_\bullet}$, not just at $a_{\rm min}$), boosting
-gravitational-focusing collision efficiency throughout, while `coulomb_log`$=\ln(m_{\rm
+**Status, end of 2026-07-28 session (superseded below)**: design and code complete, not yet
+launched. A third, separate timing issue turned up in smoke-testing (after the $a_{\rm
+min}$/density fix above): a single seed at $m_{\rm smbh}=4\times10^5$ under `star_only` did
+not converge within 15 minutes, well outside Phase 3's known 600-1740s spread for
+H18/`star_only`. Likely mechanism (not yet confirmed as thoroughly as the $a_{\rm min}$ issue
+was): holding density fixed while lowering $m_{\rm smbh}$ makes velocity dispersion lower
+*everywhere* in the cluster ($\sigma\propto\sqrt{M_\bullet}$, not just at $a_{\rm min}$),
+boosting gravitational-focusing collision efficiency throughout, while `coulomb_log`$=\ln(m_{\rm
 smbh})$ also drops, weakening the relaxation process that normally moderates runaway growth
 — both effects push toward more severe runaway growth, not a numerical artifact this time.
 **Decided with the user**: rather than narrow the grid or chase a timeout, run the full
 grid as designed and record whether each run hits the adaptive loop's 2,000,000-step
 ceiling before reaching 10 Gyr (`hit_step_ceiling` column, added to `run_one`'s output row)
-as data in its own right — "most low-$m_{\rm smbh}$/`star_only` seeds never reach 10 Gyr"
-would itself be a real Phase 5 finding about how runaway growth scales with SMBH mass. Not
-yet launched (session ended before running it) — expect this scan to take substantially
-longer than Phase 3/4's (potentially several hours total), dominated by this corner of the
-grid. Next session: launch `scripts/phase5_smbh_mass_scan.py` in the background, then
-analyze `results/phase5_raw/summary.csv` (including the convergence-rate pattern itself,
-not just the usual `pct_gt_100`/`any_gt_100` columns) once it completes.
+as data in its own right.
+
+**Results (2026-07-28, `results/phase5_smbh_mass_scan_2026-07-28.md`)**: the full 112-run grid
+completed (no exceptions; wall-clock dominated by the low-$m_{\rm smbh}$/`star_only` corner as
+anticipated, ~4 hours). 11/112 runs (all `star_only`, all at $m_{\rm smbh}\in\{4\times10^5,\
+1.264911\times10^6\}$) hit the 2,000,000-step ceiling before 10 Gyr.
+
+**Finding 1 — the qualitative Eq. 22 dependence generalizes across all 3 decades of SMBH mass
+tested**: under `star_only`, **every one of the 56 runs** (all 7 grid points $\times$ 8 seeds)
+produced at least one IMBH — a fully saturated existence claim. Under `bh_inclusive`, the mean
+% of the population exceeding 100 $M_\odot$ stays below 0.5% at **every single grid point**
+across the full range. This is a direct, conditional answer to N26's own second Section 5.4
+open question: the paper's result is not a Milky Way-specific coincidence — it generalizes
+across 3 decades of SMBH mass, contingent on the same still-open Eq. 22 ambiguity already
+documented in `#average-object-mass`. The $m_{\rm smbh}=4\times10^6$ anchor point reproduces
+Phase 3's H18 validation **bit-for-bit** for seeds 0-2 (Gate 6 pass).
+
+**Finding 2 — a severe, non-monotonic runaway-growth "sweet spot" 3-10x below the anchor mass,
+tightly scoped to this scan's fixed-cluster-structure design choice**: the step-ceiling rate
+under `star_only` is 0% at $m_{\rm smbh}=1.264911\times10^5$ (the *lowest* mass tested), jumps
+to 50% at $4\times10^5$ and 87.5% at $1.264911\times10^6$, then drops back to 0% at and above
+the $4\times10^6$ anchor. In this band, mean maximum BH mass reaches into the **millions of
+solar masses** — in several runs literally exceeding the central SMBH's own mass. Mechanism:
+two $m_{\rm smbh}$-dependent effects compete — relaxation-driven EMRI removal weakens
+($t_{\rm relax}\propto\sigma^3\propto M_\bullet^{1.5}$) as $m_{\rm smbh}$ drops, while
+growth-channel efficiency (Eq. 18 focusing, Eq. 4-7 GW-capture) simultaneously strengthens; at
+the very lowest mass tested, relaxation still wins outright (97.7% EMRI, cutting off growth
+early), but in the $4\times10^5$-$1.264911\times10^6$ band the balance tips just enough to let
+the already-documented (`#phase2-emri-rate-high`) superlinear growth mechanism run
+uncontested. **Explicitly scoped, not a claim about real lower-mass galactic nuclei**: this
+result depends entirely on holding the cluster's structural density fixed while shrinking
+$m_{\rm smbh}$ (Gate 1c) — a real lower-mass nucleus plausibly has correspondingly lower
+density too, which this scan does not model. Full gate scorecard, per-seed detail, and the
+falsification pass (ruling out a step-ceiling artifact or a numerical bug) in
+`results/phase5_smbh_mass_scan_2026-07-28.md`.
 
 ## Still to resolve before Phase 1 (Section 4) is considered fully complete
 

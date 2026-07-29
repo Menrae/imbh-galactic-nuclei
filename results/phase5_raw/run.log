@@ -1,0 +1,128 @@
+112 jobs queued: 7 m_smbh points x 2 readings x 8 seeds
+DONE m_smbh=1.2649e+05 reading=star_only seed=7: pct_gt_100=2.00 any_gt_100=True n_mergers=93 elapsed=23s
+DONE m_smbh=1.2649e+05 reading=star_only seed=5: pct_gt_100=3.40 any_gt_100=True n_mergers=121 elapsed=26s
+DONE m_smbh=1.2649e+05 reading=star_only seed=1: pct_gt_100=3.00 any_gt_100=True n_mergers=93 elapsed=26s
+DONE m_smbh=1.2649e+05 reading=star_only seed=3: pct_gt_100=3.50 any_gt_100=True n_mergers=112 elapsed=27s
+DONE m_smbh=1.2649e+05 reading=star_only seed=6: pct_gt_100=2.40 any_gt_100=True n_mergers=106 elapsed=28s
+DONE m_smbh=1.2649e+05 reading=star_only seed=0: pct_gt_100=3.90 any_gt_100=True n_mergers=155 elapsed=32s
+DONE m_smbh=1.2649e+05 reading=star_only seed=4: pct_gt_100=3.50 any_gt_100=True n_mergers=312 elapsed=42s
+DONE m_smbh=1.2649e+05 reading=bh_inclusive seed=0: pct_gt_100=0.20 any_gt_100=True n_mergers=1 elapsed=116s
+DONE m_smbh=1.2649e+05 reading=bh_inclusive seed=1: pct_gt_100=0.00 any_gt_100=False n_mergers=0 elapsed=117s
+DONE m_smbh=1.2649e+05 reading=bh_inclusive seed=4: pct_gt_100=0.00 any_gt_100=False n_mergers=0 elapsed=120s
+DONE m_smbh=1.2649e+05 reading=bh_inclusive seed=2: pct_gt_100=0.00 any_gt_100=False n_mergers=1 elapsed=128s
+DONE m_smbh=1.2649e+05 reading=bh_inclusive seed=3: pct_gt_100=0.10 any_gt_100=True n_mergers=1 elapsed=129s
+DONE m_smbh=1.2649e+05 reading=bh_inclusive seed=5: pct_gt_100=0.00 any_gt_100=False n_mergers=0 elapsed=126s
+DONE m_smbh=1.2649e+05 reading=bh_inclusive seed=6: pct_gt_100=0.00 any_gt_100=False n_mergers=0 elapsed=124s
+DONE m_smbh=4.0000e+05 reading=star_only seed=2: pct_gt_100=6.40 any_gt_100=True n_mergers=315 elapsed=103s
+DONE m_smbh=1.2649e+05 reading=bh_inclusive seed=7: pct_gt_100=0.00 any_gt_100=False n_mergers=0 elapsed=122s
+DONE m_smbh=1.2649e+05 reading=star_only seed=2: pct_gt_100=2.90 any_gt_100=True n_mergers=579 elapsed=268s
+DONE m_smbh=4.0000e+05 reading=star_only seed=3: pct_gt_100=6.10 any_gt_100=True n_mergers=675 elapsed=149s
+DONE m_smbh=4.0000e+05 reading=bh_inclusive seed=0: pct_gt_100=0.20 any_gt_100=True n_mergers=2 elapsed=53s
+DONE m_smbh=4.0000e+05 reading=bh_inclusive seed=1: pct_gt_100=0.00 any_gt_100=False n_mergers=1 elapsed=54s
+DONE m_smbh=4.0000e+05 reading=bh_inclusive seed=2: pct_gt_100=0.10 any_gt_100=True n_mergers=1 elapsed=52s
+DONE m_smbh=4.0000e+05 reading=bh_inclusive seed=3: pct_gt_100=0.10 any_gt_100=True n_mergers=1 elapsed=56s
+DONE m_smbh=4.0000e+05 reading=bh_inclusive seed=4: pct_gt_100=0.20 any_gt_100=True n_mergers=5 elapsed=53s
+DONE m_smbh=4.0000e+05 reading=star_only seed=6: pct_gt_100=4.60 any_gt_100=True n_mergers=2035 elapsed=188s
+DONE m_smbh=4.0000e+05 reading=bh_inclusive seed=5: pct_gt_100=0.00 any_gt_100=False n_mergers=2 elapsed=53s
+DONE m_smbh=4.0000e+05 reading=bh_inclusive seed=6: pct_gt_100=0.20 any_gt_100=True n_mergers=2 elapsed=55s
+DONE m_smbh=4.0000e+05 reading=bh_inclusive seed=7: pct_gt_100=0.00 any_gt_100=False n_mergers=0 elapsed=56s
+DONE m_smbh=4.0000e+05 reading=star_only seed=7: pct_gt_100=4.60 any_gt_100=True n_mergers=4905 elapsed=2941s
+DONE m_smbh=4.0000e+05 reading=star_only seed=1: pct_gt_100=5.60 any_gt_100=True n_mergers=9574 elapsed=5061s HIT_STEP_CEILING
+DONE m_smbh=4.0000e+05 reading=star_only seed=5: pct_gt_100=4.90 any_gt_100=True n_mergers=3123 elapsed=6128s HIT_STEP_CEILING
+DONE m_smbh=4.0000e+05 reading=star_only seed=0: pct_gt_100=5.40 any_gt_100=True n_mergers=2351 elapsed=6478s HIT_STEP_CEILING
+DONE m_smbh=1.2649e+06 reading=star_only seed=2: pct_gt_100=10.60 any_gt_100=True n_mergers=3635 elapsed=6198s HIT_STEP_CEILING
+DONE m_smbh=4.0000e+05 reading=star_only seed=4: pct_gt_100=5.30 any_gt_100=True n_mergers=1437 elapsed=6790s HIT_STEP_CEILING
+DONE m_smbh=1.2649e+06 reading=bh_inclusive seed=0: pct_gt_100=0.20 any_gt_100=True n_mergers=4 elapsed=25s
+DONE m_smbh=1.2649e+06 reading=bh_inclusive seed=1: pct_gt_100=0.00 any_gt_100=False n_mergers=0 elapsed=25s
+DONE m_smbh=1.2649e+06 reading=bh_inclusive seed=2: pct_gt_100=0.10 any_gt_100=True n_mergers=2 elapsed=25s
+DONE m_smbh=1.2649e+06 reading=bh_inclusive seed=3: pct_gt_100=0.10 any_gt_100=True n_mergers=1 elapsed=24s
+DONE m_smbh=1.2649e+06 reading=bh_inclusive seed=4: pct_gt_100=0.00 any_gt_100=False n_mergers=3 elapsed=25s
+DONE m_smbh=1.2649e+06 reading=bh_inclusive seed=5: pct_gt_100=0.10 any_gt_100=True n_mergers=1 elapsed=24s
+DONE m_smbh=1.2649e+06 reading=bh_inclusive seed=6: pct_gt_100=0.20 any_gt_100=True n_mergers=3 elapsed=25s
+DONE m_smbh=1.2649e+06 reading=bh_inclusive seed=7: pct_gt_100=0.10 any_gt_100=True n_mergers=1 elapsed=25s
+DONE m_smbh=1.2649e+06 reading=star_only seed=0: pct_gt_100=9.70 any_gt_100=True n_mergers=4938 elapsed=6832s HIT_STEP_CEILING
+DONE m_smbh=1.2649e+06 reading=star_only seed=1: pct_gt_100=10.50 any_gt_100=True n_mergers=9151 elapsed=7264s HIT_STEP_CEILING
+DONE m_smbh=4.0000e+06 reading=star_only seed=1: pct_gt_100=12.50 any_gt_100=True n_mergers=1041 elapsed=762s
+DONE m_smbh=4.0000e+06 reading=star_only seed=3: pct_gt_100=12.70 any_gt_100=True n_mergers=1033 elapsed=692s
+DONE m_smbh=4.0000e+06 reading=star_only seed=0: pct_gt_100=13.40 any_gt_100=True n_mergers=1102 elapsed=1810s
+DONE m_smbh=4.0000e+06 reading=star_only seed=4: pct_gt_100=11.10 any_gt_100=True n_mergers=964 elapsed=957s
+DONE m_smbh=4.0000e+06 reading=star_only seed=5: pct_gt_100=9.70 any_gt_100=True n_mergers=739 elapsed=768s
+DONE m_smbh=4.0000e+06 reading=star_only seed=2: pct_gt_100=11.70 any_gt_100=True n_mergers=923 elapsed=2056s
+DONE m_smbh=4.0000e+06 reading=bh_inclusive seed=0: pct_gt_100=0.10 any_gt_100=True n_mergers=1 elapsed=27s
+DONE m_smbh=4.0000e+06 reading=bh_inclusive seed=1: pct_gt_100=0.10 any_gt_100=True n_mergers=0 elapsed=27s
+DONE m_smbh=4.0000e+06 reading=bh_inclusive seed=2: pct_gt_100=0.00 any_gt_100=False n_mergers=0 elapsed=27s
+DONE m_smbh=4.0000e+06 reading=bh_inclusive seed=3: pct_gt_100=0.10 any_gt_100=True n_mergers=2 elapsed=27s
+DONE m_smbh=4.0000e+06 reading=bh_inclusive seed=4: pct_gt_100=0.20 any_gt_100=True n_mergers=4 elapsed=26s
+DONE m_smbh=4.0000e+06 reading=bh_inclusive seed=5: pct_gt_100=0.10 any_gt_100=True n_mergers=0 elapsed=28s
+DONE m_smbh=4.0000e+06 reading=bh_inclusive seed=6: pct_gt_100=0.00 any_gt_100=False n_mergers=0 elapsed=28s
+DONE m_smbh=4.0000e+06 reading=bh_inclusive seed=7: pct_gt_100=0.10 any_gt_100=True n_mergers=2 elapsed=28s
+DONE m_smbh=1.2649e+06 reading=star_only seed=3: pct_gt_100=9.70 any_gt_100=True n_mergers=4794 elapsed=7169s HIT_STEP_CEILING
+DONE m_smbh=1.2649e+07 reading=star_only seed=0: pct_gt_100=6.20 any_gt_100=True n_mergers=121 elapsed=391s
+DONE m_smbh=4.0000e+06 reading=star_only seed=6: pct_gt_100=10.60 any_gt_100=True n_mergers=662 elapsed=723s
+DONE m_smbh=4.0000e+06 reading=star_only seed=7: pct_gt_100=10.60 any_gt_100=True n_mergers=729 elapsed=799s
+DONE m_smbh=1.2649e+06 reading=star_only seed=5: pct_gt_100=10.00 any_gt_100=True n_mergers=4644 elapsed=4262s
+DONE m_smbh=1.2649e+07 reading=star_only seed=1: pct_gt_100=5.40 any_gt_100=True n_mergers=117 elapsed=295s
+DONE m_smbh=1.2649e+07 reading=star_only seed=3: pct_gt_100=5.00 any_gt_100=True n_mergers=101 elapsed=285s
+DONE m_smbh=1.2649e+07 reading=star_only seed=2: pct_gt_100=5.30 any_gt_100=True n_mergers=90 elapsed=339s
+DONE m_smbh=1.2649e+07 reading=bh_inclusive seed=0: pct_gt_100=0.00 any_gt_100=False n_mergers=2 elapsed=26s
+DONE m_smbh=1.2649e+07 reading=bh_inclusive seed=1: pct_gt_100=0.30 any_gt_100=True n_mergers=3 elapsed=26s
+DONE m_smbh=1.2649e+07 reading=bh_inclusive seed=2: pct_gt_100=0.20 any_gt_100=True n_mergers=1 elapsed=27s
+DONE m_smbh=1.2649e+07 reading=star_only seed=4: pct_gt_100=6.30 any_gt_100=True n_mergers=114 elapsed=327s
+DONE m_smbh=1.2649e+07 reading=bh_inclusive seed=3: pct_gt_100=0.10 any_gt_100=True n_mergers=2 elapsed=24s
+DONE m_smbh=1.2649e+07 reading=bh_inclusive seed=5: pct_gt_100=0.00 any_gt_100=False n_mergers=4 elapsed=25s
+DONE m_smbh=1.2649e+07 reading=bh_inclusive seed=4: pct_gt_100=0.00 any_gt_100=False n_mergers=2 elapsed=30s
+DONE m_smbh=1.2649e+07 reading=star_only seed=5: pct_gt_100=4.40 any_gt_100=True n_mergers=100 elapsed=334s
+DONE m_smbh=1.2649e+07 reading=bh_inclusive seed=6: pct_gt_100=0.00 any_gt_100=False n_mergers=2 elapsed=25s
+DONE m_smbh=1.2649e+07 reading=bh_inclusive seed=7: pct_gt_100=0.00 any_gt_100=False n_mergers=1 elapsed=24s
+DONE m_smbh=1.2649e+07 reading=star_only seed=6: pct_gt_100=5.50 any_gt_100=True n_mergers=82 elapsed=295s
+DONE m_smbh=1.2649e+07 reading=star_only seed=7: pct_gt_100=4.60 any_gt_100=True n_mergers=88 elapsed=348s
+DONE m_smbh=4.0000e+07 reading=star_only seed=1: pct_gt_100=2.30 any_gt_100=True n_mergers=33 elapsed=216s
+DONE m_smbh=4.0000e+07 reading=star_only seed=0: pct_gt_100=1.80 any_gt_100=True n_mergers=25 elapsed=237s
+DONE m_smbh=4.0000e+07 reading=star_only seed=2: pct_gt_100=1.70 any_gt_100=True n_mergers=17 elapsed=225s
+DONE m_smbh=4.0000e+07 reading=star_only seed=3: pct_gt_100=1.90 any_gt_100=True n_mergers=26 elapsed=231s
+DONE m_smbh=4.0000e+07 reading=bh_inclusive seed=0: pct_gt_100=0.10 any_gt_100=True n_mergers=2 elapsed=56s
+DONE m_smbh=4.0000e+07 reading=star_only seed=4: pct_gt_100=2.50 any_gt_100=True n_mergers=21 elapsed=223s
+DONE m_smbh=4.0000e+07 reading=bh_inclusive seed=1: pct_gt_100=0.80 any_gt_100=True n_mergers=5 elapsed=56s
+DONE m_smbh=4.0000e+07 reading=star_only seed=6: pct_gt_100=2.40 any_gt_100=True n_mergers=22 elapsed=211s
+DONE m_smbh=4.0000e+07 reading=bh_inclusive seed=2: pct_gt_100=0.30 any_gt_100=True n_mergers=1 elapsed=56s
+DONE m_smbh=4.0000e+07 reading=star_only seed=5: pct_gt_100=2.30 any_gt_100=True n_mergers=27 elapsed=232s
+DONE m_smbh=4.0000e+07 reading=bh_inclusive seed=3: pct_gt_100=0.40 any_gt_100=True n_mergers=1 elapsed=56s
+DONE m_smbh=4.0000e+07 reading=star_only seed=7: pct_gt_100=1.60 any_gt_100=True n_mergers=13 elapsed=237s
+DONE m_smbh=4.0000e+07 reading=bh_inclusive seed=4: pct_gt_100=0.00 any_gt_100=False n_mergers=0 elapsed=54s
+DONE m_smbh=4.0000e+07 reading=bh_inclusive seed=5: pct_gt_100=0.10 any_gt_100=True n_mergers=1 elapsed=55s
+DONE m_smbh=4.0000e+07 reading=bh_inclusive seed=6: pct_gt_100=0.20 any_gt_100=True n_mergers=5 elapsed=54s
+DONE m_smbh=4.0000e+07 reading=bh_inclusive seed=7: pct_gt_100=0.00 any_gt_100=False n_mergers=0 elapsed=54s
+DONE m_smbh=1.2649e+08 reading=star_only seed=0: pct_gt_100=0.90 any_gt_100=True n_mergers=7 elapsed=181s
+DONE m_smbh=1.2649e+08 reading=star_only seed=1: pct_gt_100=0.50 any_gt_100=True n_mergers=3 elapsed=160s
+DONE m_smbh=1.2649e+08 reading=star_only seed=2: pct_gt_100=1.00 any_gt_100=True n_mergers=5 elapsed=165s
+DONE m_smbh=1.2649e+08 reading=star_only seed=3: pct_gt_100=0.80 any_gt_100=True n_mergers=6 elapsed=174s
+DONE m_smbh=1.2649e+08 reading=star_only seed=4: pct_gt_100=0.80 any_gt_100=True n_mergers=3 elapsed=164s
+DONE m_smbh=1.2649e+08 reading=bh_inclusive seed=1: pct_gt_100=0.30 any_gt_100=True n_mergers=2 elapsed=136s
+DONE m_smbh=1.2649e+08 reading=bh_inclusive seed=0: pct_gt_100=0.40 any_gt_100=True n_mergers=5 elapsed=137s
+DONE m_smbh=1.2649e+08 reading=star_only seed=6: pct_gt_100=1.10 any_gt_100=True n_mergers=5 elapsed=165s
+DONE m_smbh=1.2649e+08 reading=star_only seed=5: pct_gt_100=1.30 any_gt_100=True n_mergers=8 elapsed=170s
+DONE m_smbh=1.2649e+08 reading=star_only seed=7: pct_gt_100=0.50 any_gt_100=True n_mergers=3 elapsed=173s
+DONE m_smbh=1.2649e+08 reading=bh_inclusive seed=3: pct_gt_100=0.60 any_gt_100=True n_mergers=4 elapsed=136s
+DONE m_smbh=1.2649e+08 reading=bh_inclusive seed=5: pct_gt_100=0.50 any_gt_100=True n_mergers=2 elapsed=133s
+DONE m_smbh=1.2649e+08 reading=bh_inclusive seed=4: pct_gt_100=0.30 any_gt_100=True n_mergers=1 elapsed=141s
+DONE m_smbh=1.2649e+08 reading=bh_inclusive seed=2: pct_gt_100=0.30 any_gt_100=True n_mergers=0 elapsed=146s
+DONE m_smbh=1.2649e+08 reading=bh_inclusive seed=6: pct_gt_100=0.40 any_gt_100=True n_mergers=3 elapsed=127s
+DONE m_smbh=1.2649e+08 reading=bh_inclusive seed=7: pct_gt_100=0.40 any_gt_100=True n_mergers=3 elapsed=114s
+DONE m_smbh=1.2649e+06 reading=star_only seed=4: pct_gt_100=9.30 any_gt_100=True n_mergers=1764 elapsed=8168s HIT_STEP_CEILING
+DONE m_smbh=1.2649e+06 reading=star_only seed=6: pct_gt_100=7.80 any_gt_100=True n_mergers=1501 elapsed=7813s HIT_STEP_CEILING
+DONE m_smbh=1.2649e+06 reading=star_only seed=7: pct_gt_100=7.70 any_gt_100=True n_mergers=3853 elapsed=10265s HIT_STEP_CEILING
+ALL DONE
+          m_smbh  coulomb_log  a_min_pc  ... pct_emri  n_ejected  max_generation
+0       126491.1    11.747927  0.001000  ...     98.3         17              16
+1       126491.1    11.747927  0.001000  ...     97.0         29              14
+2       126491.1    11.747927  0.001000  ...     97.9         21               7
+3       126491.1    11.747927  0.001000  ...     97.5         25               9
+4       126491.1    11.747927  0.001000  ...     97.6         24              10
+..           ...          ...       ...  ...      ...        ...             ...
+107  126491100.0    18.655683  0.005315  ...     33.1          0               2
+108  126491100.0    18.655683  0.005315  ...     38.8          0               2
+109    1264911.0    14.050512  0.001000  ...     53.4          2             795
+110    1264911.0    14.050512  0.001000  ...     52.5          4            1141
+111    1264911.0    14.050512  0.001000  ...     58.7         11            1501
+
+[112 rows x 20 columns]

@@ -1,55 +1,116 @@
-Phase 4 pass 3 (primordial-binary check, complete) + Phase 5 design and infra (not yet run)
+Phase 5 complete: SMBH-mass generalization scan -- both of N26's own Section 5.4
+open questions now answered
 
-Two threads this session, picking up from Phase 4 pass 1+2 (threshold scan, committed in
-24e3507): closing out Phase 4's originally-deferred primordial-binary-fraction axis, and
-scoping/building Phase 5 (SMBH-mass generalization) -- N26's second and last stated open
-question (Section 5.4). Phase 5's actual 112-run scan has NOT been executed yet; this
-commit captures completed design, code, and tests only.
+This commit closes out Phase 5 (the last planned physics-validation phase) and is a
+natural checkpoint for the project as a whole, so this message recaps all of it, not
+just this diff.
 
-Phase 4 pass 3 (complete): does N26's own 15% primordial-binary-merger prescription shift
-the star_only critical-mass crossover pass 2 located (~20-32 Msun)?
-- initial_conditions.get_log_uniform_samplers gained a primordial_binary_fraction
-  parameter (default 0.0, backward-compatible), reusing the same apply_primordial_mergers
-  machinery already validated for K20+M/H18+M.
-- 40 new runs (5 grid points x 8 seeds) at 15% vs. pass 2's existing 0% runs at identical
-  m_max. Result: no detectable effect -- pooled 19/40 (0%) vs 20/40 (15%) any-IMBH runs,
-  Fisher's exact p=1.0. The one clean effect is a consistent +2.3% mean_bh_mass bump at
-  every grid point, matching Phase 3's real K20/K20+M (+2.2%) and H18/H18+M (+2.4%) shifts
-  almost exactly -- a good Gate 6 cross-check. Graduated as a result per
-  paper/methodology.md's gates (mechanism: primordial mergers touch only 2.5% of the
-  population vs. a ~12% mass-scale shift per m_max grid step).
-- Written up in results/phase4_mass_threshold_scan_2026-07-27.md ("Pass 3" section,
-  updated Caveats/Bottom line) and paper/limitations.md#phase4-mass-family-scan.
+WHAT THIS PROJECT IS
 
-PROJECT_OVERVIEW.md updated: Phase 3 marked done, Phase 4 marked substantively answered
-(all three passes), with a new narrative bullet on the pass-2 gradual-not-sharp correction
-and the pass-3 null result, and "What's next" pointing at Phase 5.
+An independent semianalytic reimplementation of Newton et al. 2026 (ApJ 1006, 184,
+"N26" throughout), which models intermediate-mass black hole (IMBH) formation in
+galactic nuclei via two channels acting on a population of stellar-mass black holes
+orbiting a central SMBH: repeated stellar collisions (gravitational focusing driven)
+and gravitational-wave capture mergers. The goal is not just to reproduce N26's
+Table 1, but to independently re-derive every equation from its cited primary
+sources, catch and document every place the paper's text is ambiguous or
+underspecified, and use the resulting validated pipeline to answer both of N26's own
+explicitly-stated open questions (Section 5.4). End target: a direct, evidence-based
+correspondence with N26's authors (Fred Rasio's group, CIERA) once that write-up is
+ready.
 
-Phase 5 (SMBH-mass scan, design complete, not yet run): does the threshold picture
-generalize to SMBH masses other than the Milky Way's? Design decided with the user: hold
-the cluster's structural profile fixed (N26 never specifies how it would scale with
-m_smbh) and vary only m_smbh across 7 log-spaced points (1.26e5-1.26e8 Msun, centered on
-N26's own 4e6 anchor), H18 IC, both Eq. 22 readings, 8 seeds/point from the start.
+PHASES 0-2 -- scaffolding, physics, integration loop
 
-Two real problems found by smoke-testing before committing any real compute, not
-by reasoning alone -- exactly this project's established practice:
-1. population.A_MIN_PC_DEFAULT (the inner semimajor-axis sampling bound) was tuned
-   specifically for m_smbh=4e6; naively generalizing it (new
-   population.a_min_safety_bound helper) let it shrink at low m_smbh, which samples into
-   a region where the held-fixed density profile blows up to ~9000x its calibration value,
-   collapsing collision timescales and driving the step count toward its ceiling (a
-   smoke-test hang, >40 min, not a hypothetical). Fixed by clamping: a_min only grows
-   beyond the default (needed at high m_smbh), never shrinks below it.
-2. Even after that fix, low-m_smbh + star_only runs can still be dramatically slow --
-   likely genuine runaway growth becoming more severe at low m_smbh (lower velocity
-   dispersion boosts collision efficiency everywhere; lower coulomb_log weakens the
-   moderating relaxation process). One seed at m_smbh=4e5 did not converge within 15
-   minutes. Decided with the user: run the full grid as designed anyway and track
-   whether each run hits the 2,000,000-step ceiling (hit_step_ceiling column) as data in
-   its own right, rather than narrowing the grid or discarding slow runs.
+Every equation from N26's Section 4 physics (velocity dispersion, BH/stellar density
+profiles, collision and GW-capture timescales, spin evolution, EMRI stopping
+conditions, relaxation-driven orbital random walk) implemented from primary sources
+and independently unit-tested. The full adaptive-timestep simulation loop -- sample
+an initial population, evolve collisions/mergers/EMRIs/ejections forward in time,
+track merger trees -- runs end to end for N=1000, 10 Gyr.
 
-scripts/phase5_smbh_mass_scan.py implements the design (not yet executed -- next session's
-first task). paper/limitations.md#phase5-smbh-mass-scan has the full writeup including
-both discovered issues and their fixes/decisions.
+PHASE 3 -- validation against N26's published Table 1
 
-Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>
+All four of N26's initial-condition recipes (K20, K20+M, H18, H18+M) implemented and
+validated against Table 1. Along the way: found and fixed a real EMRI-overproduction
+bug (relaxation-walk substepping), and traced a large, still-open modeling ambiguity
+in N26's own Eq. 22 (does the relaxation timescale's <M_avg>/rho use star-only mass,
+per Rose et al. 2022's explicit "single-mass system" derivation, or a BH-inclusive
+weighted average, per N26's own broader phrasing and its new two-component density
+apparatus?). Both readings are textually defensible and give qualitatively different
+behavior (star-only keeps the merger channel alive but produces a heavy-tailed
+runaway-growth residual; BH-inclusive suppresses runaway growth but reproduces the
+original EMRI-overproduction defect almost exactly). Adopted star-only as the
+default, flagged as open, and made it a first-class config toggle
+(`relaxation_mass_weighting`) rather than picking silently -- every subsequent scan
+reports both readings. Also resolved the Coulomb logarithm (ln(M_bullet/M_star),
+from Bar-Or/Kupi/Alexander 2013 and Vasiliev 2017) and flagged a genuine
+1/3-vs-1/2 exponent discrepancy between N26's printed Eq. 21 and its own cited
+source (Volonteri et al. 2013 / Bardeen 1970).
+
+PHASE 4 -- critical-mass threshold scan (N26's first open question)
+
+Does a sharp mass-distribution threshold separate "this environment reliably forms
+IMBHs" from "it never does"? Built a log-uniform mass family generalizing H18's own
+functional form, scanned across both Eq. 22 readings. Three passes:
+- Pass 1 (9 grid points x 3 seeds x both readings): found the threshold's *existence*
+  is not robust to the Eq. 22 ambiguity -- star_only shows a smooth 0%-12.7% rise;
+  bh_inclusive stays flat at ~0% across the whole range.
+- Pass 2 (8 seeds instead of 3, per paper/methodology.md's Gate 3 sample-size rule):
+  overturned, not just tightened, the pass-1 location claim. What looked like a
+  saturated threshold at 3 seeds turned out to be a gradual, unsaturated crossover
+  (~20-32 Msun) at 8 -- the exact failure mode Gate 3 exists to catch.
+- Pass 3: tested whether N26's own primordial-binary-merger fraction (0% vs 15%)
+  shifts that crossover. It doesn't, measurably (Fisher's exact p=1.0) -- a real,
+  well-evidenced null result, not just an unexamined absence of signal.
+
+`paper/methodology.md` (new): a 9-gate checklist, built from practices this project
+was already using ad hoc, for when a secondary finding graduates from "preliminary
+observation" to "reportable result" -- primary-source grounding, noise-floor
+comparison, adequate sample size for the specific claim, mechanism not just pattern,
+an adversarial falsification pass, an internal consistency cross-check, an explicit
+scope statement, framing discipline (never imply N26 is "wrong" without checking
+their own cited sources), and a reproducibility artifact. Every finding from Phase 4
+onward is scored against this checklist before being written up as a result.
+
+PHASE 5 -- SMBH-mass generalization scan (N26's second open question) -- this commit
+
+Does the paper's result hold for SMBHs other than the Milky Way's 4e6 Msun? Scanned
+7 SMBH masses log-spaced across 3 decades (1.26e5-1.26e8 Msun, centered on and
+including N26's own fiducial value exactly), holding the cluster's structural
+profile fixed (N26 gives no prescription for how it would scale -- flagged
+explicitly as our own extension, not from N26), H18 IC, both Eq. 22 readings, 8
+seeds/point from the start = 112 runs. Two numerical issues caught and fixed by
+smoke-testing before spending real compute: an a_min/density scaling bug (fixed via
+a floor-only clamp, `population.a_min_safety_bound`), and a genuine, severe
+low-mass/star_only convergence problem, decided (with the user) to track as data
+(`hit_step_ceiling`) rather than route around.
+
+Two findings, both scored against all 9 methodology.md gates:
+1. The qualitative Eq. 22 dependence generalizes across the full 3-decade range:
+   under star_only, literally every one of 56 runs produced an IMBH; under
+   bh_inclusive, the population fraction exceeding 100 Msun stayed under 0.5% at
+   every single grid point. This is a direct, conditional answer to N26's own
+   question -- not a Milky Way coincidence, contingent on the same open Eq. 22
+   ambiguity as everything else in this project. The 4e6 anchor point reproduces
+   Phase 3's own H18 validation bit-for-bit.
+2. A new, non-monotonic runaway-growth "sweet spot" 3-10x below the Milky Way mass:
+   counter to the naive "smaller SMBH = worse" guess, catastrophic growth (BHs
+   reaching millions of Msun, in several runs exceeding the SMBH itself) is absent
+   at the lowest mass tested, peaks in a specific band, and vanishes again at and
+   above the anchor -- traced to two competing sigma-dependent effects (relaxation-
+   driven EMRI removal vs. collision/GW-capture growth efficiency) that happen to
+   cancel at both ends of the tested range but not in the middle. Explicitly and
+   heavily scoped as an artifact of holding cluster density fixed while shrinking
+   the SMBH, not a claim about real lower-mass galactic nuclei.
+
+Full write-up: results/phase5_smbh_mass_scan_2026-07-28.md (gate scorecard, per-seed
+detail, falsification pass). paper/limitations.md and PROJECT_OVERVIEW.md updated.
+
+STATUS
+
+Both of N26's Section 5.4 open questions are now substantively answered. Phases 6
+(rate forecast) and 7 (cluster-shape sensitivity) remain explicitly out of scope for
+now. Full test suite: 238 passed, 1 skipped. Every modeling choice, ambiguity, and
+its resolution is logged with reasoning in paper/limitations.md and
+docs/equations.md, not just this message -- start there for the full detail behind
+any claim summarized above.
