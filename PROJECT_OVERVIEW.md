@@ -179,10 +179,12 @@ $m_{\rm max}=100\,M_\odot$, outside the paper's own studied mass regime) — see
 for supermassive black holes of other masses) is now also substantively answered — see
 `results/phase5_smbh_mass_scan_2026-07-28.md` — completing both of N26's own Section 5.4
 open questions. Phases 6 (rate forecast) and 7 (cluster-shape sensitivity) remain explicitly
-out of scope for now; the natural next step is a single external-facing summary document for
-outreach to N26's authors, covering validation status plus the project's two most concrete,
-still-open findings (the Eq. 21 spin-exponent discrepancy and the Eq. 22 $\langle M_{\rm
-avg}\rangle$/$\rho$ ambiguity), framed as direct questions rather than blockers.
+out of scope for now. The external-facing outreach document for N26's authors is now drafted —
+a short cover email plus a technical memo, both in `outreach/` — covering validation status
+plus the project's two most concrete, still-open findings (the Eq. 21 spin-exponent discrepancy
+and the Eq. 22 $\langle M_{\rm avg}\rangle$/$\rho$ ambiguity), framed as direct questions rather
+than blockers per `paper/methodology.md`'s Gate 8. Not yet sent — the placeholders for name and
+affiliation in the email need to be filled in first.
 
 ## Where to look for more detail
 
