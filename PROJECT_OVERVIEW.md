@@ -183,8 +183,8 @@ out of scope for now. The external-facing outreach document for N26's authors is
 a short cover email plus a technical memo, both in `outreach/` — covering validation status
 plus the project's two most concrete, still-open findings (the Eq. 21 spin-exponent discrepancy
 and the Eq. 22 $\langle M_{\rm avg}\rangle$/$\rho$ ambiguity), framed as direct questions rather
-than blockers per `paper/methodology.md`'s Gate 8. Not yet sent — the placeholders for name and
-affiliation in the email need to be filled in first.
+than blockers per `paper/methodology.md`'s Gate 8. Not yet sent — contact details in the email
+still need to be filled in.
 
 ## Where to look for more detail
 

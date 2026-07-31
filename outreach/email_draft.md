@@ -21,6 +21,7 @@ https://github.com/Menrae/imbh-galactic-nuclei. I'd very much appreciate your re
 ambiguities, and I'm happy to share anything else that would help.
 
 Best regards,
-[Name]
-[Affiliation, if any]
-[Contact]
+Armeen Shasti-Nazem
+University of Washington
+aashasti@uw.edu
+(425) 919-8596

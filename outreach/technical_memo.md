@@ -1,6 +1,6 @@
 # An independent reimplementation of Newton et al. (2026): validation status and two open questions
 
-**Prepared by**: [Name] ([affiliation, if any]) — independent reimplementation project, not affiliated with the original study.
+**Prepared by**: Armeen Shasti-Nazem (University of Washington) — independent reimplementation project, not affiliated with the original study.
 **Regarding**: Newton, A., Rose, S. C., Kıroğlu, F., Hoang, B.-M., & Rasio, F. A. 2026, *ApJ*,
 1006:184, "Intermediate-mass Black Hole Formation from Hierarchical Mergers in Galactic Nuclei"
 (hereafter N26).
