@@ -278,7 +278,7 @@ EMRI $R_{\rm crit}\sim10^{-6}$ pc scale") turned out not to be safe at all: a fu
 test (50 BHs, 10 Gyr) showed 66% of the population became EMRIs, wildly above N26's own
 implied EMRI fraction ($\sim$4-5% over 10 Gyr, from their $\sim$4-4.8 Gyr$^{-1}$ rate per
 1000-BH galaxy). Tracing this down: `remaining_merger_time_circular(20\,M_\odot,
-4\times10^6\,M_\odot, 10^{-4}\,{\rm pc}) \approx 0.15$ Gyr — i.e. a BH born near the old
+4\times10^6\,M_\odot, 10^{-4}\,{\rm pc}) \approx 0.15` Gyr — i.e. a BH born near the old
 $a_{\min}$ undergoes prompt EMRI from *quiescent* GW inspiral alone (Eq. 4.4/Peters decay),
 with no dynamical process needed at all. At $a_{\min}=10^{-3}$ pc the same quantity is
 $\approx1450$ Gyr, comfortably ($>100\times$) longer than the 10 Gyr simulation. This is a
@@ -787,7 +787,7 @@ this flags it directly). Design decided with the user, 2026-07-28:
 about it in advance**: letting `a_min_safety_bound` *shrink* `a_min_pc` below
 `A_MIN_PC_DEFAULT` at low $m_{\rm smbh}$ (the first version of this design) is wrong for a
 completely different reason than the one it was designed to fix. `a_min_safety_bound(1.2649
-\times10^5)$ gives $\approx1.68\times10^{-4}$ pc — and at that radius, the *held-fixed*
+\times10^5)` gives $\approx1.68\times10^{-4}$ pc — and at that radius, the *held-fixed*
 stellar density profile ($\rho\propto r^{-\alpha_\star}$, uncapped at small $r$) evaluates to
 $\approx1.25\times10^{10}\,M_\odot/{\rm pc}^3$: about 9236x its own $r_0=0.25$ pc calibration
 value, and about 9x even the already-extreme density at the MW-anchor's $a_{\rm min}=10^{-3}$
