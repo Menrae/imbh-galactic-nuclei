@@ -16,13 +16,18 @@ README is the technical/setup reference.
 
 ## Project status
 
-Phase 0 (scaffolding), Phase 1 (core physics, Sections 2 & 4 of the paper), and Phase 2
-(the Monte Carlo integration loop) are complete and tested. Phase 3 (validating against
-the paper's published Table 1) is in progress — the four initial mass/spin distributions
-are implemented, but a calibration issue in the relaxation-driven orbital dynamics is
-currently blocking a meaningful full comparison (see `paper/limitations.md` for the
-detailed diagnosis). See `docs/equations.md` for the physics reference and
-`paper/limitations.md` for the running list of caveats, ambiguities, and assumptions.
+Phases 0-5 are complete. Phase 3 validated all four of the paper's initial mass/spin
+distributions against its published Table 1; Phase 4 mapped out whether the paper's
+critical initial-mass threshold is sharp or gradual (gradual, under one reading of a
+still-open equation ambiguity); Phase 5 tested whether the paper's result generalizes to
+supermassive black holes of other masses (it does, under the same reading) — together
+answering both of the open questions the paper poses in its own Section 5.4. Phases 6
+(universe-wide detection-rate forecast) and 7 (cluster-shape sensitivity) haven't been
+started. Outreach materials for the paper's authors, covering validation status and the
+project's open questions, are drafted in `outreach/`. See `docs/equations.md` for the
+physics reference, `paper/limitations_summary.md` for a readable summary of every
+modeling ambiguity and caveat, and `paper/limitations.md` for the complete running log
+behind it.
 
 ## Layout
 
@@ -33,7 +38,8 @@ scripts/                  run scripts for simulations / parameter scans (no note
 config/                   YAML configs specifying full simulation runs
 docs/equations.md         single source of truth for every equation, with original citations
 docs/table1_reference.md  transcribed Table 1 from the paper, for Phase 3 validation
-paper/                    research-note writeup + limitations.md (maintained incrementally)
+paper/                    research-note writeup + limitations.md (running log, maintained
+                          incrementally) and limitations_summary.md (readable digest)
 references/               the source paper plus every other paper pulled in to fill gaps
 figures/                  output figures
 results/                  output data (dataframes, logs)
@@ -57,8 +63,9 @@ integration parameters. Configs can be loaded from / saved to YAML (see
 
 ## Validation
 
-Phase 3 reproduces Table 1 and Figures 2–9 of Newton et al. 2026 as a hard gate before any
-extension work (Phases 4–7); results and discrepancies are documented explicitly, not
-smoothed over. Currently blocked on a calibration issue (EMRI rate far above the paper's —
-see `paper/limitations.md#phase2-emri-rate-high`) before a meaningful full comparison can
-be run.
+Phase 3 reproduces Table 1 of Newton et al. 2026 across all four initial conditions
+(K20, K20+M, H18, H18+M); results and discrepancies are documented explicitly, not
+smoothed over. Bulk-population statistics (e.g. fraction of BHs exceeding 100 M☉)
+reproduce well; the EMRI rate and the extreme upper mass tail for the heavier H18 family
+remain open items — see `paper/limitations_summary.md` for the readable version and
+`paper/limitations.md#phase2-emri-rate-high` for the full diagnostic trail.
